@@ -16,15 +16,6 @@ def find_relation():
         for rel in nltk.sem.relextract.extract_rels('ORG', 'LOC', doc,corpus='ieer', pattern = IN):
              print (nltk.sem.relextract.rtuple(rel))
 
-def extract_entities(_mathces):
-    entities = {}
-    for file in _mathces:
-        with io.open(file, 'r') as f:
-            for sentence in sent_tokenize(f.read()):
-                chunks = ne_chunk(pos_tag(word_tokenize(sentence), lang='ru'))
-                entities.get(file, []).extend([chunk for chunk in chunks if hasattr(chunk, 'label')]) #label = entity
-    return entities
 
 if __name__ == '__main__':
     print count_of_documents()
-    print extract_entities(_mathces)
