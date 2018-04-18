@@ -1,6 +1,7 @@
 #coding=utf-8
 import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
 from nltk import sent_tokenize, word_tokenize, pos_tag
+from library.decorators import validate
 
 #logger
 logger = logging.getLogger('lib.py')
@@ -21,41 +22,48 @@ WORD_HELP = u'<surface_all | surface_no_pm | stem | suffix_X>, где в слу�
 PARSER = argparse.ArgumentParser(description=" Project #1 Shevyakov, Mardanov")
 
 # Choice values in parameters for app
-WORD_TYPES = ('surface_all', 'surface_no_pm', 'stem', 'suffex_X')
+WORD_TYPES = (
+    'surface_all',
+    'surface_no_pm',
+    'stem',
+    'suffex_X'
+)
+
 FEATURES_TYPES = (False, True)
 
-# Dummy
+# requred variables
 REQUIRED = False
 
-# Patterns for files in corpuses
+# Patterns for files in corpuses and annotations
 FILE_PATTERN_IN_CORPUS = {
-    u'MADE-1.0': '*[0-9]_*[0-9]',
+    u'MADE-1.0': ['*[0-9]_*[0-9]', '*[0-9]_*[0-9].bioc.xml'],
     u'corpus_release': r'*[0-9].txt',
 }
 
 '''
     return count(int), document_names(list of strings)
 '''
-
-
+@validate
 def get_filenames_and_count_of_documents(corpus_path):
-    matches = []
-    re_pattern = FILE_PATTERN_IN_CORPUS.get(corpus_path.split("/")[0], None)
+    matches, annotations = ([], [])
+    re_pattern = FILE_PATTERN_IN_CORPUS.get(corpus_path.split("/")[0])
     if re_pattern is not None:
         for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), corpus_path)):
-            for filename in fnmatch.filter(filenames, re_pattern):
+            for filename in fnmatch.filter(filenames, re_pattern[0]):
                 matches.append(os.path.join(root, filename))
             logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(matches)))
-        return len(matches), matches
+            for filename in fnmatch.filter(filenames, re_pattern[1]):
+                annotations.append(os.path.join(root, filename))
+            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-annotations'.format(len(annotations)))
+        return len(matches), matches, annotations
     else:
-        return 0, ()
+        return 0, (), ()
+
 
 
 '''
-    Functional requirements
+    Functional requirements(HELP for this project)
 '''
-
-
 def parse_args():
     '''
         F1
@@ -92,3 +100,4 @@ def parse_args():
 
     args = PARSER.parse_args()
     return args
+
