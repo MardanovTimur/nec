@@ -6,7 +6,7 @@ from nltk import sent_tokenize, word_tokenize, pos_tag
 logger = logging.getLogger('lib.py')
 
 #   Local path of project
-PROJECT_PATH = os.path.abspath(os.path.join(__file__, '..'))
+PROJECT_PATH = os.path.abspath(os.path.join(__file__, '..', '..'))
 
 #   Path of corpuses
 DATA_PATH = os.path.join(PROJECT_PATH, 'data')
@@ -29,8 +29,8 @@ REQUIRED = False
 
 # Patterns for files in corpuses
 FILE_PATTERN_IN_CORPUS = {
-    u'MADE-1.0': '[0-9]+_[0-9]+',
-    u'corpus_release': '[0-9]+\.txt',
+    u'MADE-1.0': '*[0-9]_*[0-9]',
+    u'corpus_release': r'*[0-9].txt',
 }
 
 '''
@@ -41,9 +41,8 @@ FILE_PATTERN_IN_CORPUS = {
 def get_filenames_and_count_of_documents(corpus_path):
     matches = []
     re_pattern = FILE_PATTERN_IN_CORPUS.get(corpus_path.split("/")[0], None)
-    if re_pattern:
-        for root, dirnames, filenames in os.walk(
-                os.path.abspath(os.path.join(os.path.abspath(__file__), '..', 'corpuses', ))):
+    if re_pattern is not None:
+        for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), corpus_path)):
             for filename in fnmatch.filter(filenames, re_pattern):
                 matches.append(os.path.join(root, filename))
             logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(matches)))
