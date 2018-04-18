@@ -39,15 +39,15 @@ FILE_PATTERN_IN_CORPUS = {
 
 
 def get_filenames_and_count_of_documents(corpus_path):
-    _mathces = []
+    matches = []
     re_pattern = FILE_PATTERN_IN_CORPUS.get(corpus_path.split("/")[0], None)
     if re_pattern:
         for root, dirnames, filenames in os.walk(
                 os.path.abspath(os.path.join(os.path.abspath(__file__), '..', 'corpuses', ))):
             for filename in fnmatch.filter(filenames, re_pattern):
-                _mathces.append(os.path.join(root, filename))
-            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(_matches)))
-        return len(_mathces), _mathces
+                matches.append(os.path.join(root, filename))
+            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(matches)))
+        return len(matches), matches
     else:
         return 0, ()
 
