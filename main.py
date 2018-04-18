@@ -1,5 +1,10 @@
-import os, sys
+import os, sys, logging
 from library.lib import parse_args
+
+logging.basicConfig(filename="app.log",
+                    level=logging.INFO,
+                    format ='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 
 class App(object):
 
@@ -8,5 +13,7 @@ class App(object):
 
 if __name__ == '__main__':
     args = parse_args()
+    logger = logging.getLogger('main.py')
+    logger.info("App started")
     app = App(args)
 

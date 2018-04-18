@@ -2,9 +2,8 @@
 import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
 from nltk import sent_tokenize, word_tokenize, pos_tag
 
-# logger basic config
-#  logging.basicConfig(filename="../sample.log", level=logging.INFO)
-
+#logger
+logger = logging.getLogger('lib.py')
 
 
 #   Local path of project
@@ -46,6 +45,7 @@ def get_filenames_and_count_of_documents(corpus_path):
         for root, dirnames, filenames in os.walk(os.path.abspath(os.path.join(os.path.abspath(__file__),'..','corpuses',))):
             for filename in fnmatch.filter(filenames, re_pattern):
                 _mathces.append(os.path.join(root, filename))
+            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(_matches)))
         return len(_mathces), _mathces
     else:
         return 0, ()
