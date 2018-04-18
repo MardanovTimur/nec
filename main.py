@@ -25,7 +25,8 @@ class App(object):
 
     def first(self, ):
         self.document_count, self.d_paths, self.a_paths = get_filenames_and_count_of_documents(self.src_train_texts)
-        convert_to_objects(self.a_paths[0:5])
+        self.documents = convert_to_objects(self.a_paths)
+        print self.documents[0]
         print self.document_count
 
 

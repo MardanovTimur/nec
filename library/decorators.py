@@ -14,7 +14,9 @@ def validate(function):
     def wrapper(*args, **kwargs):
         try:
             return function(*args, **kwargs)
-        except:
+        except Exception as e:
+            print e.message
             logger.error('in function = {}'.format(function.__name__))
+            logger.error('{}'.format(str(e)))
     return wrapper
 
