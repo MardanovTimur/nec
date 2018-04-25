@@ -31,6 +31,8 @@ WORD_TYPES = (
 
 FEATURES_TYPES = (False, True)
 
+SENTENCE_DIVIDERS = ('.', '!', '?')
+
 # requred variables
 REQUIRED = False
 
@@ -39,6 +41,16 @@ FILE_PATTERN_IN_CORPUS = {
     u'MADE-1.0': ['*[0-9]_*[0-9]', '*[0-9]_*[0-9].bioc.xml'],
     u'corpus_release': r'*[0-9].txt',
 }
+
+
+
+class DynamicFields(object):
+
+    def __init__(self, *args, **kwargs):
+        map(lambda item: setattr(self, item[0], item[1]),dict(filter(lambda x: x[1] is not None, kwargs.items())).items())
+
+    def __str__(self,):
+        return str(self.__dict__)
 
 '''
     return count(int), document_names(list of strings)
@@ -100,4 +112,33 @@ def parse_args():
 
     args = PARSER.parse_args()
     return args
+
+
+def count_ref_in_document(text, entities, relations):
+    count = 0
+    for rel in relations:
+        try:
+            ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
+            if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
+                count += 1
+        except:
+            logger.error('Not correct in annotations. Relation id = {}, ent1 = {} ent2 = {}'.format(rel.id, rel.refA, rel.refB))
+    return count
+
+def references_in_sentence(documents):
+    count = 0
+    for document in documents:
+        with open(document.text_path) as f:
+            text = f.read()
+            count += count_ref_in_document(text, document.entities, document.references)
+    return count
+
+@validate
+def statistic_of_corpus(count, documents):
+    print 'Count of document: {}'.format(count)
+    references_count = reduce(lambda initial, y: initial + len(y.references), documents, 0)
+    print 'Count of references [ALL]: {}'.format(references_count)
+    print 'Count of references [IN ONE SENTENSE]: {}'.format(references_in_sentence(documents))
+
+
 

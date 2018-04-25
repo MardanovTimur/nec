@@ -8,8 +8,8 @@ from models.document import Document
 
 # Fields realisation for xml childrens
 class XML_field(object):
+
     ref_id = []
-    pass
 
     @staticmethod
     def get_params_for_entity(entity):
@@ -18,8 +18,8 @@ class XML_field(object):
             if item.tag == 'infon':
                 xml_obj.type = item.text
             elif item.tag == 'location':
-                xml_obj.length = item.attrib['length']
-                xml_obj.index = item.attrib['offset']
+                xml_obj.length = int(item.attrib['length'])
+                xml_obj.index = int(item.attrib['offset'])
             elif item.tag == 'text':
                 xml_obj.value = item.text
         return xml_obj
@@ -44,7 +44,7 @@ def parse_xml(file_path,):
         if entity.tag == "annotation":
             xml_fields_obj = XML_field.get_params_for_entity(entity)
             kwargs_for_entity = {
-                'id': entity.attrib['id'],
+                'id': int(entity.attrib['id']),
                 'length': xml_fields_obj.length,
                 'index_a': xml_fields_obj.index,
                 'index_b': xml_fields_obj.index + xml_fields_obj.length,
@@ -55,11 +55,12 @@ def parse_xml(file_path,):
         elif entity.tag == 'relation':
             xml_fields_obj = XML_field.get_params_for_relation(entity)
             kwargs_for_relation = {
-                'id': entity.attrib['id'],
+                'id': int(entity.attrib['id']),
                 'refA' : xml_fields_obj.ref_id[0],
                 'refB' : xml_fields_obj.ref_id[1],
             }
             references_list.append(Reference(**kwargs_for_relation))
+            XML_field.ref_id = []
     return entities_list, references_list
 
 @validate

@@ -1,7 +1,8 @@
 import os, sys, logging
 from library.lib import parse_args, get_filenames_and_count_of_documents, \
-     WORD_TYPES
+     WORD_TYPES, DynamicFields
 from library.annotations import convert_to_objects
+from library.lib import statistic_of_corpus
 
 logging.basicConfig(filename="app.log",
                     level=logging.INFO,
@@ -9,25 +10,25 @@ logging.basicConfig(filename="app.log",
 
 logger = logging.getLogger('main.py')
 
-class App(object):
+class App(DynamicFields):
 
     document_count = 0
 
+    #Default properies
     text_encoding = "utf-8"
     word_type = WORD_TYPES[0]
     fetures=False
     laplace=False
     unknown_word_freq = 0.5
 
-    def __init__(self, args):
-        map(lambda item: setattr(self, item[0], item[1]),dict(filter(lambda x: x[1] is not None,args.__dict__.items())).items())
-
+    def __init__(self, *args, **kwargs):
+        kwargs = args[0].__dict__
+        super(App, self).__init__(*args, **kwargs)
 
     def first(self, ):
         self.document_count, self.d_paths, self.a_paths = get_filenames_and_count_of_documents(self.src_train_texts)
         self.documents = convert_to_objects(self.a_paths)
-        print self.documents[0]
-        print self.document_count
+        statistic_of_corpus(self.document_count, self.documents)
 
 
     a_paths = ()
@@ -46,3 +47,4 @@ if __name__ == '__main__':
     app = App(args)
     logger.info("First task started : Find relations")
     app.first()
+
