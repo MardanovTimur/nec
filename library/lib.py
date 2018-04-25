@@ -115,30 +115,36 @@ def parse_args():
 
 
 def count_ref_in_document(text, entities, relations):
-    count = 0
+    count_in, count_out = (0, 0)
     for rel in relations:
         try:
             ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
             if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
-                count += 1
+                count_in += 1
+            else:
+                count_out +=1
         except:
             logger.error('Not correct in annotations. Relation id = {}, ent1 = {} ent2 = {}'.format(rel.id, rel.refA, rel.refB))
-    return count
+    return count_in, count_out
 
 def references_in_sentence(documents):
-    count = 0
+    count_in, count_out = (0, 0)
     for document in documents:
         with open(document.text_path) as f:
             text = f.read()
-            count += count_ref_in_document(text, document.entities, document.references)
-    return count
+            count_i, count_o = count_ref_in_document(text, document.entities, document.references)
+            count_in += count_i
+            count_out +=count_o
+    return count_in, count_out
 
 @validate
 def statistic_of_corpus(count, documents):
     print 'Count of document: {}'.format(count)
     references_count = reduce(lambda initial, y: initial + len(y.references), documents, 0)
     print 'Count of references [ALL]: {}'.format(references_count)
-    print 'Count of references [IN ONE SENTENSE]: {}'.format(references_in_sentence(documents))
+    references_sentences_count = references_in_sentence(documents)
+    print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'.\
+            format(references_sentences_count[0], references_sentences_count[1])
 
 
 

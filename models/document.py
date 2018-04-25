@@ -7,6 +7,4 @@ class Document(DynamicFields):
     entities = []
     references = []
 
-    def __str__(self,):
-        return str(self.__dict__)
 
