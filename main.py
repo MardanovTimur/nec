@@ -27,7 +27,7 @@ class App(DynamicFields):
 
     def first(self, ):
         self.document_count, self.d_paths, self.a_paths = get_filenames_and_count_of_documents(self.src_train_texts)
-        self.documents = convert_to_objects(self.a_paths)
+        self.documents = convert_to_objects(self.a_paths, self.src_train_texts)
         statistic_of_corpus(self.document_count, self.documents)
 
 

@@ -64,16 +64,17 @@ def parse_xml(file_path,):
     return entities_list, references_list
 
 @validate
-def convert_to_objects(a_paths= ()):
+def convert_to_objects(a_paths, corpus):
     docs = []
     for path in a_paths:
-        e_list, r_list = parse_xml(path)
-        kwargs_for_doc = {
-            'entities': e_list,
-            'references' : r_list,
-            'annotation_path': path,
-            'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
-        }
+        if ('MADE-1.0' in corpus):
+            e_list, r_list = parse_xml(path)
+            kwargs_for_doc = {
+                'entities': e_list,
+                'references' : r_list,
+                'annotation_path': path,
+                'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
+            }
         docs.append(Document(**kwargs_for_doc))
     return docs
 
