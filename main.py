@@ -27,8 +27,11 @@ class App(DynamicFields):
 
     def first(self, ):
         self.document_count, self.d_paths, self.a_paths = get_filenames_and_count_of_documents(self.src_train_texts)
-        self.documents = convert_to_objects(self.a_paths, self.src_train_texts)
-        statistic_of_corpus(self.document_count, self.documents)
+        self.documents = convert_to_objects(self.a_paths, self.src_train_texts, self.text_encoding)
+        statistic_of_corpus(self)
+
+    def second(self, ):
+        pass
 
 
     a_paths = ()
@@ -41,6 +44,13 @@ class App(DynamicFields):
     @property
     def document_paths(self,):
         return self.d_paths
+
+    '''
+        Setter for in || out references
+    '''
+    def set_refs_in_out(self, ref_in, ref_out):
+        self.ref_in_one_sentence = ref_in
+        self.ref_in_out_sentence = ref_out
 
 if __name__ == '__main__':
     args = parse_args()

@@ -2,6 +2,7 @@
 import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
 from nltk import sent_tokenize, word_tokenize, pos_tag
 from library.decorators import validate
+import io
 
 #logger
 logger = logging.getLogger('lib.py')
@@ -85,7 +86,7 @@ def parse_args():
                          help=u'путь к корпусу, обязательный аргумент,  Данные должны лежать в директории проекта data',
                          metavar='SRC_TRAIN_TEXTS', required=REQUIRED, nargs='?')
     PARSER.add_argument('--text-encoding', type=str, help=u'кодировка-текста в файлах корпуса',
-                        metavar='Encoding', required=False, nargs='?')
+                        metavar='Encoding', required=False, nargs='?', default="utf-8")
     RPARSER.add_argument('--word-type', type=str, help=WORD_HELP,
                          choices=WORD_TYPES, metavar='Word type', default=WORD_TYPES[0], required=False, nargs='?')
     RPARSER.add_argument('-n', type=int, required=REQUIRED,
@@ -114,37 +115,46 @@ def parse_args():
     return args
 
 
-def count_ref_in_document(text, entities, relations):
-    count_in, count_out = (0, 0)
+def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out):
     for rel in relations:
         try:
             ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
             if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
-                count_in += 1
+                ref_in.append(rel)
             else:
-                count_out +=1
+                ref_out.append(rel)
         except:
-            logger.error('Not correct in annotations. Relation id = {}, ent1 = {} ent2 = {}'.format(rel.id, rel.refA, rel.refB))
-    return count_in, count_out
+            '''
+                If annotations is not correct.
+            '''
 
-def references_in_sentence(documents):
-    count_in, count_out = (0, 0)
+'''
+    count_in - Count In one sentence
+    count_out - Count In different sentences
+'''
+def references_in_sentence(documents, encoding):
+    references_in_one_sentence, references_in_different_sentences = ([], [])
     for document in documents:
-        with open(document.text_path) as f:
+        with io.open(document.text_path, encoding='{}'.format(encoding)) as f:
             text = f.read()
-            count_i, count_o = count_ref_in_document(text, document.entities, document.references)
-            count_in += count_i
-            count_out +=count_o
-    return count_in, count_out
+            count_ref_in_document(text, document.entities, document.references, document.text_path,
+                                  references_in_one_sentence, references_in_different_sentences)
+    return references_in_one_sentence, references_in_different_sentences
 
 @validate
-def statistic_of_corpus(count, documents):
-    print 'Count of document: {}'.format(count)
-    references_count = reduce(lambda initial, y: initial + len(y.references), documents, 0)
+def statistic_of_corpus(app):
+    print 'Count of document: {}'.format(app.document_count)
+
+    references_count = reduce(lambda initial, y: initial + len(y.references), app.documents, 0)
     print 'Count of references [ALL]: {}'.format(references_count)
-    references_sentences_count = references_in_sentence(documents)
+
+    references_sentences = references_in_sentence(app.documents, app.text_encoding)
+
+    app.set_refs_in_out(references_sentences[0], references_sentences[1])
     print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'.\
-            format(references_sentences_count[0], references_sentences_count[1])
+            format(len(references_sentences[0]), len(references_sentences[1]))
+
+    del references_sentences
 
 
 

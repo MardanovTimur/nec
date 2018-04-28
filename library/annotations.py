@@ -36,7 +36,7 @@ class XML_field(object):
 
 
 #MADE-1.0 dataset annotations
-def parse_xml(file_path,):
+def parse_xml(file_path, encoding):
     entities_list,references_list = ([], [])
     tree = ET.parse(file_path).getroot()
     entities = tree._children[3]._children[1]._children[1:]
@@ -64,11 +64,11 @@ def parse_xml(file_path,):
     return entities_list, references_list
 
 @validate
-def convert_to_objects(a_paths, corpus):
+def convert_to_objects(a_paths, corpus, encoding):
     docs = []
     for path in a_paths:
         if ('MADE-1.0' in corpus):
-            e_list, r_list = parse_xml(path)
+            e_list, r_list = parse_xml(path, encoding)
             kwargs_for_doc = {
                 'entities': e_list,
                 'references' : r_list,
