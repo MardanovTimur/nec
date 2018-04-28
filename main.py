@@ -3,6 +3,7 @@ from library.lib import parse_args, get_filenames_and_count_of_documents, \
      WORD_TYPES, DynamicFields
 from library.annotations import convert_to_objects
 from library.lib import statistic_of_corpus
+from library.lib import base_line_model
 
 logging.basicConfig(filename="app.log",
                     level=logging.INFO,
@@ -19,7 +20,7 @@ class App(DynamicFields):
     word_type = WORD_TYPES[0]
     fetures=False
     laplace=False
-    unknown_word_freq = 0.5
+    #  unknown_word_freq = 0.5
 
     def __init__(self, *args, **kwargs):
         kwargs = args[0].__dict__
@@ -31,7 +32,14 @@ class App(DynamicFields):
         statistic_of_corpus(self)
 
     def second(self, ):
-        pass
+        base_line_model(self)
+
+
+    def __getattr__(self, attr):
+        try:
+            return super(App, self).__getattr__()
+        except AttributeError as er:
+            return None
 
 
     a_paths = ()
@@ -57,4 +65,5 @@ if __name__ == '__main__':
     app = App(args)
     logger.info("First task started : Find relations")
     app.first()
+    app.second()
 

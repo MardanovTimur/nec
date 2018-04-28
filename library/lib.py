@@ -3,6 +3,7 @@ import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
 from nltk import sent_tokenize, word_tokenize, pos_tag
 from library.decorators import validate
 import io
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 #logger
 logger = logging.getLogger('lib.py')
@@ -89,7 +90,7 @@ def parse_args():
                         metavar='Encoding', required=False, nargs='?', default="utf-8")
     RPARSER.add_argument('--word-type', type=str, help=WORD_HELP,
                          choices=WORD_TYPES, metavar='Word type', default=WORD_TYPES[0], required=False, nargs='?')
-    RPARSER.add_argument('-n', type=int, required=REQUIRED,
+    RPARSER.add_argument('--n', type=float, required=REQUIRED,
                          help=u'<n-грамность> слова, словосочетания и т.д., обязательный элемент',
                          metavar='NGramm', nargs='?')
     PARSER.add_argument('--features', type=bool, choices=FEATURES_TYPES,
@@ -118,7 +119,8 @@ def parse_args():
 def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out):
     for rel in relations:
         try:
-            ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
+            #  ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
+            ent1, ent2 = (rel.refAobj, rel.refBobj)
             if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
                 ref_in.append(rel)
             else:
@@ -153,8 +155,29 @@ def statistic_of_corpus(app):
     app.set_refs_in_out(references_sentences[0], references_sentences[1])
     print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'.\
             format(len(references_sentences[0]), len(references_sentences[1]))
-
     del references_sentences
+
+
+
+def base_line_model(app):
+    vectorizer = TfidfVectorizer(
+                        encoding=app.text_encoding,
+                        ngram_range=(app.n, ) * 2,
+                        min_df=app.unknown_word_freq or 1.0,
+                        max_features=20,
+                    )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -56,8 +56,11 @@ def parse_xml(file_path, encoding):
             xml_fields_obj = XML_field.get_params_for_relation(entity)
             kwargs_for_relation = {
                 'id': int(entity.attrib['id']),
+                'type': xml_fields_obj.type,
                 'refA' : xml_fields_obj.ref_id[0],
                 'refB' : xml_fields_obj.ref_id[1],
+                'refAobj': filter(lambda ent: ent.id == xml_fields_obj.ref_id[0], entities_list)[0],
+                'refBobj': filter(lambda ent: ent.id == xml_fields_obj.ref_id[1], entities_list)[0],
             }
             references_list.append(Reference(**kwargs_for_relation))
             XML_field.ref_id = []
