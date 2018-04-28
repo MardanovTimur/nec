@@ -2,8 +2,12 @@
 import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
 from nltk import sent_tokenize, word_tokenize, pos_tag
 from library.decorators import validate
-import io
+from nltk.tokenize import TweetTokenizer
+import io, numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn import svm
+from sklearn.linear_model.logistic import LogisticRegression
+from models.pipeline import PipeLine
 
 #logger
 logger = logging.getLogger('lib.py')
@@ -90,7 +94,7 @@ def parse_args():
                         metavar='Encoding', required=False, nargs='?', default="utf-8")
     RPARSER.add_argument('--word-type', type=str, help=WORD_HELP,
                          choices=WORD_TYPES, metavar='Word type', default=WORD_TYPES[0], required=False, nargs='?')
-    RPARSER.add_argument('--n', type=float, required=REQUIRED,
+    RPARSER.add_argument('--n', type=int, required=REQUIRED,
                          help=u'<n-грамность> слова, словосочетания и т.д., обязательный элемент',
                          metavar='NGramm', nargs='?')
     PARSER.add_argument('--features', type=bool, choices=FEATURES_TYPES,
@@ -98,7 +102,7 @@ def parse_args():
                         metavar='Features', default=False, required=False)
     PARSER.add_argument('--laplace', help=u'использовать сглаживание по Лапласу при наличии этого аргумента', nargs='?',
                         required=False)
-    PARSER.add_argument('--unknown-word-freq',
+    PARSER.add_argument('--unknown-word-freq', type=int,
                         help=u'частота, ниже которой слова в обуч. множестве считаются неизвестными', nargs='?',
                         required=False)
     RPARSER.add_argument('-o', type=str,
@@ -119,6 +123,7 @@ def parse_args():
 def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out):
     for rel in relations:
         try:
+            # old realisation with indexes (quickly)
             #  ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
             ent1, ent2 = (rel.refAobj, rel.refBobj)
             if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
@@ -148,24 +153,31 @@ def statistic_of_corpus(app):
     print 'Count of document: {}'.format(app.document_count)
 
     references_count = reduce(lambda initial, y: initial + len(y.references), app.documents, 0)
+    app.references_count = references_count
     print 'Count of references [ALL]: {}'.format(references_count)
 
     references_sentences = references_in_sentence(app.documents, app.text_encoding)
-
     app.set_refs_in_out(references_sentences[0], references_sentences[1])
     print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'.\
             format(len(references_sentences[0]), len(references_sentences[1]))
     del references_sentences
 
 
-
+@validate
 def base_line_model(app):
-    vectorizer = TfidfVectorizer(
-                        encoding=app.text_encoding,
-                        ngram_range=(app.n, ) * 2,
-                        min_df=app.unknown_word_freq or 1.0,
-                        max_features=20,
-                    )
+    left_words, right_words, types = ([], [], [])
+    for document in app.documents:
+        for rel in document.references:
+            left_words.append(rel.refAobj.value)
+            right_words.append(rel.refBobj.value)
+            types.append(rel.type)
+
+    pipeline = PipeLine(app, test_counts = 200)
+    pipeline.fit(left_words, right_words, types)
+    pipeline.transform(['lidocaine',], ['anesthesia',])
+    print pipeline.test()
+
+
 
 
 
