@@ -45,7 +45,7 @@ REQUIRED = False
 # Patterns for files in corpuses and annotations
 FILE_PATTERN_IN_CORPUS = {
     u'MADE-1.0': ['*[0-9]_*[0-9]', '*[0-9]_*[0-9].bioc.xml'],
-    u'corpus_release': r'*[0-9].txt',
+    u'corpus_release': ['*[0-9].txt', '*[0-9].ann'],
 }
 
 
@@ -161,6 +161,8 @@ def statistic_of_corpus(app):
     print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'.\
             format(len(references_sentences[0]), len(references_sentences[1]))
     del references_sentences
+
+    print 'Count of entities in relations: {}'.format(reduce(lambda c, doc: c+len(doc.references)*2,app.documents,0))
 
 
 @validate

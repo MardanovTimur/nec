@@ -1,4 +1,6 @@
 #coding=utf-8
+import codecs
+import re
 import xml.etree.ElementTree as ET, io
 from library.decorators import validate
 from models.entity import Entity
@@ -66,6 +68,43 @@ def parse_xml(file_path, encoding):
             XML_field.ref_id = []
     return entities_list, references_list
 
+def parse_brat(file_path, encoding):
+    entities_list, references_list = [],[]
+    file = codecs.open(file_path,'r', encoding=encoding)
+    lines = file.readlines()
+    text = file.read()
+    for line in lines:
+        if line.startswith('R'):
+            id, relation_info = re.split('\t', line)[:2]
+            relation_type, arg1, arg2 = relation_info.split(' ')
+            refA = arg1.split(':')[1].replace('T','')
+            refB = arg2.split(':')[1].replace('T','')
+            kwargs_for_relation = {
+                'id': int(id.replace('R','')),
+                'type': relation_type,
+                'refA': int(refA),
+                'refB': int(refB),
+            }
+            references_list.append(Reference(**kwargs_for_relation))
+
+        elif line.startswith('T'):
+            fields = re.split("\t+", line)
+            id = fields[0].replace('T','')
+            entity_type, indexA= fields[1].split(' ')[:2]
+            indexB = fields[1].split(' ')[-1]
+            value = fields[2].replace('\n', '')
+            kwargs_for_entity = {
+                'id': int(id),
+                'length': int(indexB) - int(indexA),
+                'index_a': int(indexA),
+                'index_b': int(indexB),
+                'value': value,
+                'type': entity_type,
+            }
+            entities_list.append(Entity(**kwargs_for_entity))
+
+    return entities_list, references_list
+
 @validate
 def convert_to_objects(a_paths, corpus, encoding):
     docs = []
@@ -77,6 +116,16 @@ def convert_to_objects(a_paths, corpus, encoding):
                 'references' : r_list,
                 'annotation_path': path,
                 'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
+            }
+        elif ('corpus_release' in corpus):
+
+            e_list, r_list = parse_brat(path, encoding)
+
+            kwargs_for_doc = {
+                'entities': e_list,
+                'references': r_list,
+                'annotation_path': path,
+                'text_path': path.replace('ann','txt'),
             }
         docs.append(Document(**kwargs_for_doc))
     return docs
