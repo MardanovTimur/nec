@@ -6,6 +6,7 @@ from library.decorators import validate
 from models.entity import Entity
 from models.reference import Reference
 from models.document import Document
+from nltk.tokenize import word_tokenize
 
 
 # Fields realisation for xml childrens
@@ -36,9 +37,16 @@ class XML_field(object):
                 xml_obj.ref_id.append(int(item.attrib['refid']))
         return xml_obj
 
+def read_doc(file_path, encoding):
+    with io.open(file_path, encoding=encoding) as f:
+        return f.read()
+
 
 #MADE-1.0 dataset annotations
 def parse_xml(file_path, encoding):
+
+    text = read_doc(file_path.replace('annotations', 'corpus').replace('.bioc.xml', ''), encoding)
+
     entities_list,references_list = ([], [])
     tree = ET.parse(file_path).getroot()
     entities = tree._children[3]._children[1]._children[1:]
@@ -56,13 +64,23 @@ def parse_xml(file_path, encoding):
             entities_list.append(Entity(**kwargs_for_entity))
         elif entity.tag == 'relation':
             xml_fields_obj = XML_field.get_params_for_relation(entity)
+
+            entities = [filter(lambda ent: ent.id == xml_fields_obj.ref_id[0], entities_list)[0],
+                         filter(lambda ent: ent.id == xml_fields_obj.ref_id[1], entities_list)[0]]
+            if (xml_fields_obj.ref_id[0] > xml_fields_obj.ref_id[1]):
+                entities.reverse()
+            ent1, ent2 = entities
+
             kwargs_for_relation = {
                 'id': int(entity.attrib['id']),
                 'type': xml_fields_obj.type,
                 'refA' : xml_fields_obj.ref_id[0],
                 'refB' : xml_fields_obj.ref_id[1],
-                'refAobj': filter(lambda ent: ent.id == xml_fields_obj.ref_id[0], entities_list)[0],
-                'refBobj': filter(lambda ent: ent.id == xml_fields_obj.ref_id[1], entities_list)[0],
+                'refAobj': ent1,
+                'refBobj': ent2,
+#NEW TODO add this
+                'text_between': text[ent1.index_b: ent2.index_a],
+                'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
             references_list.append(Reference(**kwargs_for_relation))
             XML_field.ref_id = []

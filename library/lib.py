@@ -1,6 +1,7 @@
 #coding=utf-8
 import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
 from nltk import sent_tokenize, word_tokenize, pos_tag
+from nltk.tag import pos_tag
 from library.decorators import validate
 from nltk.tokenize import TweetTokenizer
 import io, numpy as np
@@ -176,29 +177,20 @@ def statistic_of_corpus(app):
 
 
 @validate
-def base_line_model(app):
+def base_line_model(app, entites_test_list):
+    left_test, right_test = (dict(entites_test_list).keys(), dict(entites_test_list).values())
     left_words, right_words, types = ([], [], [])
     for document in app.documents:
         for rel in document.references:
             left_words.append(rel.refAobj.value)
             right_words.append(rel.refBobj.value)
             types.append(rel.type)
-    pipeline = PipeLine(app, test_counts = 200)
+    pipeline = PipeLine(app, test_counts = 50)
     pipeline.fit(left_words, right_words, types)
-    pipeline.transform(['lidocaine',], ['anesthesia',])
+    pipeline.transform(left_test, right_test)
     print pipeline.test()
 
-
-
-
-
-
-
-
-
-
-
-
+    return pipeline
 
 
 

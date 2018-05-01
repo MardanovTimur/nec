@@ -31,8 +31,41 @@ class App(DynamicFields):
         self.documents = convert_to_objects(self.a_paths, self.src_train_texts, self.text_encoding)
         statistic_of_corpus(self)
 
-    def second(self, ):
-        base_line_model(self)
+
+    '''
+        The data param should be zipped from 2 lists of entyties
+        Example:
+            data = zip(('ledocaine', 'word1'),('anesthesia', 'word2'))
+            ent0[0] = ledocaine; ent0[1] = anesthesia
+            ent1[0] = word1; ent1[1] = word2
+
+        Save current pipeline
+    '''
+    def second(self, data):
+        self.pipeline = base_line_model(self, data)
+
+    def third(self,):
+        '''
+            Return self -> for choose required type
+        '''
+        return self
+
+    def relation_in_one_sentence(self, ):
+        '''
+        Features:
+            Relation in sentence = [
+                CPOS(part of speech in relation),
+                WVNULL(when no verb in between),
+                WVFL(when only verb in between),
+                WBNULL(no words in between)],
+                WBFL(when only one word in between),
+            ]
+        '''
+        #  self.pipeline.ref_in_one_cpos()
+        #  self.pipeline.ref_in_one_wvnull()
+        #  self.pipeline.ref_in_one_wvfl()
+        #  self.pipeline.ref_in_one_wbnull()
+        #  self.pipeline.ref_in_one_wbfl()
 
 
     def __getattr__(self, attr):
@@ -63,7 +96,30 @@ class App(DynamicFields):
 if __name__ == '__main__':
     args = parse_args()
     app = App(args)
+
+#----------------------------------------------------------------------------
     logger.info("First task started : Find relations")
     app.first()
-    app.second()
+
+#----------------------------------------------------------------------------
+    logger.info("Second task started : Baseline model")
+
+    '''
+        Baseline test_data
+    '''
+    ent2 = ('anesthesia', )
+    ent1 = ('ledocaine',)
+    app.second(zip(ent1, ent2))
+
+#----------------------------------------------------------------------------
+    logger.info("Third task started : Add extra features for data")
+    #---------------------------A-------------------------------------------
+    logger.info("Third task started : Extra features for relation in one sentence")
+    app.third().relation_in_one_sentence()
+    #-----------------------------------------------------------------------
+
+
+
+
+#----------------------------------------------------------------------------
 

@@ -16,4 +16,6 @@ class Reference(DynamicFields):
     refAobj = None
     refBobj = None
 
-
+    # Text between entities
+    text_between = ""
+    tokenized_text_between = ()
