@@ -89,7 +89,7 @@ def parse_args():
     RPARSER = PARSER.add_argument_group('required arguments')
     RPARSER.add_argument('--src-train-texts', type=str,
                          help=u'путь к корпусу, обязательный аргумент,  Данные должны лежать в директории проекта data',
-                         metavar='SRC_TRAIN_TEXTS', required=REQUIRED, nargs='?')
+                         metavar='SRC_TRAIN_TEXTS', required=True, nargs='?')
     PARSER.add_argument('--text-encoding', type=str, help=u'кодировка-текста в файлах корпуса',
                         metavar='Encoding', required=False, nargs='?', default="utf-8")
     RPARSER.add_argument('--word-type', type=str, help=WORD_HELP,
