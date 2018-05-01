@@ -84,6 +84,8 @@ def parse_brat(file_path, encoding):
                 'type': relation_type,
                 'refA': int(refA),
                 'refB': int(refB),
+                'refAobj': filter(lambda ent: ent.id == int(refA), entities_list)[0],
+                'refBobj': filter(lambda ent: ent.id == int(refB), entities_list)[0]
             }
             references_list.append(Reference(**kwargs_for_relation))
 

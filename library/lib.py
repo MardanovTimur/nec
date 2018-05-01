@@ -148,6 +148,14 @@ def references_in_sentence(documents, encoding):
                                   references_in_one_sentence, references_in_different_sentences)
     return references_in_one_sentence, references_in_different_sentences
 
+def count_unique_entites_in_relations(documents):
+    s = set()
+    for doc in documents:
+        for rel in doc.references:
+            s.add(rel.refAobj.value)
+            s.add(rel.refBobj.value)
+    return len(s)
+
 @validate
 def statistic_of_corpus(app):
     print 'Count of document: {}'.format(app.document_count)
@@ -163,6 +171,8 @@ def statistic_of_corpus(app):
     del references_sentences
 
     print 'Count of entities in relations: {}'.format(reduce(lambda c, doc: c+len(doc.references)*2,app.documents,0))
+    print 'Count of UNIQUE entities in relations: {}'.format(
+        count_unique_entites_in_relations(app.documents))
 
 
 @validate
