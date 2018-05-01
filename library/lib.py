@@ -94,7 +94,7 @@ def parse_args():
                         metavar='Encoding', required=False, nargs='?', default="utf-8")
     RPARSER.add_argument('--word-type', type=str, help=WORD_HELP,
                          choices=WORD_TYPES, metavar='Word type', default=WORD_TYPES[0], required=False, nargs='?')
-    RPARSER.add_argument('--n', type=int, required=REQUIRED,
+    RPARSER.add_argument('--n', type=int, required=True,
                          help=u'<n-грамность> слова, словосочетания и т.д., обязательный элемент',
                          metavar='NGramm', nargs='?')
     PARSER.add_argument('--features', type=bool, choices=FEATURES_TYPES,
@@ -171,7 +171,6 @@ def base_line_model(app):
             left_words.append(rel.refAobj.value)
             right_words.append(rel.refBobj.value)
             types.append(rel.type)
-
     pipeline = PipeLine(app, test_counts = 200)
     pipeline.fit(left_words, right_words, types)
     pipeline.transform(['lidocaine',], ['anesthesia',])
