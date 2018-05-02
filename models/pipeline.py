@@ -1,9 +1,13 @@
 #coding=utf-8
+import codecs
+
 from sklearn.linear_model.logistic import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
+
+from library.lib import SENTENCE_DIVIDERS
 from models.reference import Features
 __author__ = 'Timur Mardanov'
 
@@ -85,7 +89,27 @@ class PipeLine(object):
 #------------------------------------------------------------------------
 #                      3task (A part)
 #------------------------------------------------------------------------
+    #C1
+    def ref_in_diff_sdist(self):
+        #SDIST
+        print 'SDIST calculation'
+        self.matrixA = np.hstack([self.matrix,np.array(calculate_sdist_in_diff_sentence(self.app)).T])
+    #C2
+    def left_entity_freq_in_doc(self):
+        #CRFQ
+        print 'CRFQ calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_entity_freq_in_doc_in_diff_sentence(self.app,left=True)).T])
 
+    #C3
+    def right_entity_freq_in_doc(self):
+        # DRFQ
+        print 'CRFQ calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_entity_freq_in_doc_in_diff_sentence(self.app, left=False)).T])
+
+#------------------------------------------------------------------------
+#                      3task (C part)
+#------------------------------------------------------------------------
+T
 def verb_in_sentence(tagged):
     __doc__ = 'LIB'
     if len(tagged) == 0:
@@ -127,6 +151,37 @@ def calculate_wbnull_in_one_sentence(app):
 def calculate_wbfl_in_one_sentence(app):
     references = app.all_references
     return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
+
+def calculate_sdist_in_diff_sentence(app):
+    #column of matrix with SDIST feature
+    sdist_feature = []
+    references = app.all_references
+    for rel in references:
+        if rel.feature_type == Features.InDifferentSentence:
+            count_sentence_dividers = 0
+            for divider in SENTENCE_DIVIDERS:
+                count_sentence_dividers += rel.text_between.count(divider)-1
+            sdist_feature.append(count_sentence_dividers)
+        else:
+            sdist_feature.append(-1)
+    return sdist_feature
+
+def calculate_entity_freq_in_doc_in_diff_sentence(app, left=True):
+    #column of matrix with CRFQ feature
+    cfrq_feature = []
+    for doc in app.documents:
+        doc_file = codecs.open(doc.text_path, 'r', encoding='utf-8')
+        text_of_doc = doc_file.read()
+        for rel in doc.references:
+            if rel.feature_type == Features.InDifferentSentence:
+                entity_text = rel.refAobj.value if left else rel.refBobj.value
+                cfrq_feature.append(text_of_doc.count(entity_text))
+            else:
+                cfrq_feature.append(-1)
+        doc_file.close()
+    return cfrq_feature
+
+
 
 #------------------------------------------------------------------------
 #                      End
