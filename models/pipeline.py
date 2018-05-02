@@ -5,7 +5,6 @@ import numpy as np
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 from models.reference import Features
-
 __author__ = 'Timur Mardanov'
 
 class PipeLine(object):
@@ -55,32 +54,32 @@ class PipeLine(object):
     def ref_in_one_cpos(self):
         #CPOS
         print 'CPOS calculation'
-        new_matrix = np.array([calculate_cpos_in_one_sentence(self.app)]).T
-        self.matrixA = np.hstack([self.matrix, new_matrix])
+        cpos = np.array([calculate_cpos_in_one_sentence(self.app)])
+        self.matrix = np.append(self.matrix, cpos.T, axis=1)
 
     #A2
     def ref_in_one_wvnull(self):
         #WVNULL
         print 'WVNULL calculation'
-        self.matrixA = np.hstack([self.matrix, np.array(calculate_wvnull_in_one_sentence(self.app)).T])
+        self.matrix = np.hstack([self.matrix, np.array(calculate_wvnull_in_one_sentence(self.app)).T])
 
     #A3
     def ref_in_one_wvfl(self):
         #WVFL
         print 'WVFL calculation'
-        self.matrixA = np.hstack([self.matrix, np.array(calculate_wvfl_in_one_sentence(self.app)).T])
+        self.matrix = np.hstack([self.matrix, np.array(calculate_wvfl_in_one_sentence(self.app)).T])
 
     #A4
     def ref_in_one_wbnull(self):
         #WBNULL
         print 'WBNULL calculation'
-        self.matrixA = np.hstack([self.matrix, np.array(calculate_wbnull_in_one_sentence(self.app)).T])
+        self.matrix = np.hstack([self.matrix, np.array(calculate_wbnull_in_one_sentence(self.app)).T])
 
     #A5
     def ref_in_one_wbfl(self):
         #WBFL
         print 'WBFL calculation'
-        self.matrixA = np.hstack([self.matrix, np.array(calculate_wbfl_in_one_sentence(self.app)).T])
+        self.matrix = np.hstack([self.matrix, np.array(calculate_wbfl_in_one_sentence(self.app)).T])
 
 
 #------------------------------------------------------------------------

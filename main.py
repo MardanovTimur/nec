@@ -98,8 +98,6 @@ class App(DynamicFields):
     '''
     def set_refs_in_out(self, ref_in, ref_out):
         self.all_references = self.get_references_from_documents()
-        self.ref_in_one_sentence = ref_in
-        self.ref_in_out_sentence = ref_out
 
 if __name__ == '__main__':
     args = parse_args()
