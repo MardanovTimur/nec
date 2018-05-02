@@ -90,20 +90,25 @@ def parse_brat(file_path, encoding):
     entities_list, references_list = [],[]
     file = codecs.open(file_path,'r', encoding=encoding)
     lines = file.readlines()
-    text = file.read()
+    text = read_doc(file_path.replace('ann','txt'),encoding)
     for line in lines:
         if line.startswith('R'):
             id, relation_info = re.split('\t', line)[:2]
             relation_type, arg1, arg2 = relation_info.split(' ')
             refA = arg1.split(':')[1].replace('T','')
             refB = arg2.split(':')[1].replace('T','')
+            entities = [filter(lambda ent: ent.id == int(refA), entities_list)[0],
+                        filter(lambda ent: ent.id == int(refB), entities_list)[0]]
+            ent1, ent2 = entities
             kwargs_for_relation = {
                 'id': int(id.replace('R','')),
                 'type': relation_type,
                 'refA': int(refA),
                 'refB': int(refB),
                 'refAobj': filter(lambda ent: ent.id == int(refA), entities_list)[0],
-                'refBobj': filter(lambda ent: ent.id == int(refB), entities_list)[0]
+                'refBobj': filter(lambda ent: ent.id == int(refB), entities_list)[0],
+                'text_between': text[ent1.index_b: ent2.index_a],
+                'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
             references_list.append(Reference(**kwargs_for_relation))
 
