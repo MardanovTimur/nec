@@ -8,7 +8,6 @@ import io, numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import svm
 from sklearn.linear_model.logistic import LogisticRegression
-from models.pipeline import PipeLine
 
 #logger
 logger = logging.getLogger('lib.py')
@@ -58,6 +57,7 @@ class DynamicFields(object):
 
     def __str__(self,):
         return str(self.__dict__)
+
 
 '''
     return count(int), document_names(list of strings)
@@ -121,6 +121,7 @@ def parse_args():
     return args
 
 
+from models.reference import Features
 def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out):
     for rel in relations:
         try:
@@ -128,8 +129,10 @@ def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out)
             #  ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
             ent1, ent2 = (rel.refAobj, rel.refBobj)
             if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
+                rel.feature_type =  Features.InOneSentence
                 ref_in.append(rel)
             else:
+                rel.feature_type =  Features.InDifferentSentence
                 ref_out.append(rel)
         except:
             '''
@@ -176,6 +179,7 @@ def statistic_of_corpus(app):
         count_unique_entites_in_relations(app.documents))
 
 
+from models.pipeline import PipeLine
 @validate
 def base_line_model(app, entites_test_list):
     left_test, right_test = (dict(entites_test_list).keys(), dict(entites_test_list).values())

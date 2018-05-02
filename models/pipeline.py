@@ -4,6 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
+from models.reference import Features
 
 __author__ = 'Timur Mardanov'
 
@@ -53,37 +54,38 @@ class PipeLine(object):
     #A1
     def ref_in_one_cpos(self):
         #CPOS
-        self.matrixA = np.append(self.matrix, calculate_cpos_in_one_sentence(self.app), axis=1)
+        print 'CPOS calculation'
+        new_matrix = np.array([calculate_cpos_in_one_sentence(self.app)]).T
+        self.matrixA = np.hstack([self.matrix, new_matrix])
 
     #A2
     def ref_in_one_wvnull(self):
         #WVNULL
-        self.matrixA = np.append(self.matrix, calculate_wvnull_in_one_sentence(self.app), axis=1)
+        print 'WVNULL calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_wvnull_in_one_sentence(self.app)).T])
 
     #A3
     def ref_in_one_wvfl(self):
         #WVFL
-        self.matrixA = np.append(self.matrix, calculate_wvfl_in_one_sentence(self.app), axis=1)
+        print 'WVFL calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_wvfl_in_one_sentence(self.app)).T])
 
     #A4
     def ref_in_one_wbnull(self):
         #WBNULL
-        self.matrixA = np.append(self.matrix, calculate_wbnull_in_one_sentence(self.app), axis=1)
+        print 'WBNULL calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_wbnull_in_one_sentence(self.app)).T])
 
     #A5
     def ref_in_one_wbfl(self):
         #WBFL
-        self.matrixA = np.append(self.matrix, calculate_wbfl_in_one_sentence(self.app), axis=1)
+        print 'WBFL calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_wbfl_in_one_sentence(self.app)).T])
 
 
 #------------------------------------------------------------------------
 #                      3task (A part)
 #------------------------------------------------------------------------
-
-#TODO я не понял пока этот тип
-def calculate_cpos_in_one_sentence(app):
-    references = app.ref_in_one_sentence
-    return map(lambda reference: pos_tag(reference.tokenized_text_between, tagset='universal'),references)
 
 def verb_in_sentence(tagged):
     __doc__ = 'LIB'
@@ -99,25 +101,35 @@ def only_one_verb_in_sentence(tagged):
     else:
         return int(sum(map(lambda tag: u'VERB' == tag, tagged[:,1]))==1)
 
+# CPOS (pos_tag of first entity)
+def calculate_cpos_in_one_sentence(app):
+    references = app.all_references
+    return map(lambda reference: pos_tag(word_tokenize(reference.refAobj.value),
+                         tagset='universal')[0][1] if reference.feature_type == Features.InOneSentence else -1,references)
+
 # no verb between
 def calculate_wvnull_in_one_sentence(app):
-    references = app.ref_in_one_sentence
-    return map(lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal'))),references)
+    references = app.all_references
+    return map(lambda reference: \
+               verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
+                    if reference.feature_type == Features.InOneSentence else -1, references)
 
 # only one verb
 def calculate_wvfl_in_one_sentence(app):
-    references = app.ref_in_one_sentence
-    return map(lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal'))),references)
+    references = app.all_references
+    return map(lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
+               if reference.feature_type == Features.InOneSentence else -1,references)
 
 def calculate_wbnull_in_one_sentence(app):
-    references = app.ref_in_one_sentence
+    references = app.all_references
     #INTBOOLLEN я вызываю тебя...........
-    return map(lambda reference: int(bool(len(reference.text_between))),references)
+    return map(lambda reference: int(bool(len(reference.text_between))) if reference.feature_type == Features.InOneSentence else -1,references)
 
 def calculate_wbfl_in_one_sentence(app):
-    references = app.ref_in_one_sentence
-    return map(lambda reference: int(len(reference.tokenized_text_between) == 1),references)
+    references = app.all_references
+    return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
 
 #------------------------------------------------------------------------
 #                      End
 #------------------------------------------------------------------------
+

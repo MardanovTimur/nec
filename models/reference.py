@@ -1,5 +1,13 @@
 #coding=utf-8
 from library.lib import DynamicFields
+from enum import Enum
+
+
+class Features(Enum):
+    INIT = 0
+    InOneSentence = 1
+    InDifferentSentence = 2
+
 
 class Reference(DynamicFields):
     # Relation ID
@@ -19,3 +27,7 @@ class Reference(DynamicFields):
     # Text between entities
     text_between = ""
     tokenized_text_between = ()
+
+    # Feature type
+    feature_type  = Features.INIT
+

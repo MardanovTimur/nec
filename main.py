@@ -4,6 +4,7 @@ from library.lib import parse_args, get_filenames_and_count_of_documents, \
 from library.annotations import convert_to_objects
 from library.lib import statistic_of_corpus
 from library.lib import base_line_model
+import numpy as np
 
 logging.basicConfig(filename="app.log",
                     level=logging.INFO,
@@ -61,11 +62,11 @@ class App(DynamicFields):
                 WBFL(when only one word in between),
             ]
         '''
-        #  self.pipeline.ref_in_one_cpos()
-        #  self.pipeline.ref_in_one_wvnull()
-        #  self.pipeline.ref_in_one_wvfl()
-        #  self.pipeline.ref_in_one_wbnull()
-        #  self.pipeline.ref_in_one_wbfl()
+        self.pipeline.ref_in_one_cpos()
+        self.pipeline.ref_in_one_wvnull()
+        self.pipeline.ref_in_one_wvfl()
+        self.pipeline.ref_in_one_wbnull()
+        self.pipeline.ref_in_one_wbfl()
 
 
     def __getattr__(self, attr):
@@ -86,10 +87,17 @@ class App(DynamicFields):
     def document_paths(self,):
         return self.d_paths
 
+
+    def get_references_from_documents(self, ):
+        initial = list()
+        map(lambda doc: initial.extend(doc.references), self.documents)
+        return initial
+
     '''
         Setter for in || out references
     '''
     def set_refs_in_out(self, ref_in, ref_out):
+        self.all_references = self.get_references_from_documents()
         self.ref_in_one_sentence = ref_in
         self.ref_in_out_sentence = ref_out
 
