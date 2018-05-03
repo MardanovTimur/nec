@@ -34,7 +34,8 @@ class PipeLine(object):
             encoding=app.text_encoding,
             ngram_range=(app.n, ) * 2,
             max_df=app.unknown_word_freq or 1.0,
-            max_features = 2 * app.references_count,
+            max_features=2 * app.references_count,
+            smooth_idf=app.laplace,
         )
 
     def fit(self, left_words, right_words, types):

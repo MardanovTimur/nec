@@ -101,8 +101,8 @@ def parse_args():
     PARSER.add_argument('--features', type=bool, choices=FEATURES_TYPES,
                         help=u'использовать дополнительные hand-crafted признаки, указанные в задании',
                         metavar='Features', default=False, required=False)
-    PARSER.add_argument('--laplace', help=u'использовать сглаживание по Лапласу при наличии этого аргумента', nargs='?',
-                        required=False)
+    PARSER.add_argument('--laplace', help=u'использовать сглаживание по Лапласу при наличии этого аргумента',
+                        default=False,required=False, action='store_true')
     PARSER.add_argument('--unknown-word-freq', type=int,
                         help=u'частота, ниже которой слова в обуч. множестве считаются неизвестными', nargs='?',
                         required=False)

@@ -78,7 +78,6 @@ def parse_xml(file_path, encoding):
                 'refB' : xml_fields_obj.ref_id[1],
                 'refAobj': ent1,
                 'refBobj': ent2,
-#NEW TODO add this
                 'text_between': text[ent1.index_b: ent2.index_a],
                 'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
