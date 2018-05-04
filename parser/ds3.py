@@ -1,27 +1,48 @@
+import json
 from collections import defaultdict
 
 from models.document import Document
 from models.entity import Entity
+from models.relation import Relation
 
-
-def parse_file(basename):
+def parse_dataset(basename, with_y=False):
     abstract_fields = ('id', 'title', 'text')
     entity_fields = ('doc_id', 'id', 'type', 'index_a', 'index_b', 'value')
+    relation_fields = ('doc_id', 'type', 'TODO', '_', 'refA', 'refB')
+
+    def line_to_dict(l, titles):
+        d = {k: v.split(':')[-1] for k, v in zip(titles, l.strip().split('\t'))}
+        d.pop('_', None)  # remove ignored fields
+        return d
 
     abstracts_file = open(basename + '_abstracts.tsv', 'rb')
     entities_file = open(basename + '_entities.tsv', 'rb')
 
-    doc_entities = defaultdict(lambda x: [])
+    doc_entities = defaultdict(lambda: [])
+    doc_relations = defaultdict(lambda: [])
 
     for l in entities_file:
-        entity = Entity(**{k: v for k, v in zip(entity_fields, l.split('\t'))})
+        entity = Entity(**line_to_dict(l, entity_fields))
         doc_entities[entity.doc_id].append(entity)
 
+    if with_y:
+        relations_file = open(basename + '_relations.tsv', 'rb')
+        for l in relations_file:
+            rel = Relation(**line_to_dict(l, relation_fields))
+            doc_relations[rel.doc_id].append(rel)
+
     for l in abstracts_file:
-        doc = Document(**{k: v for k, v in zip(abstract_fields, l.split('\t'))})
+        doc = Document(**line_to_dict(l, abstract_fields))
         doc.entities = doc_entities[doc.id]
+        doc.relations = doc_relations[doc.id]
         yield doc
 
 
+def export_docs(docs, filename):
+    with open(filename, 'w') as file:
+        file.write('\n'.join([json.dumps(doc, default=lambda o: o.__dict__) for doc in docs]))
+
+
 if __name__ == '__main__':
-    pass
+    dev_set = parse_dataset('./data/chemprot_development', True)
+    export_docs(dev_set, './target/docs.json')
