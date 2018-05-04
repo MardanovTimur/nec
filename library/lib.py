@@ -123,7 +123,7 @@ def parse_args():
     return args
 
 
-from models.reference import Features
+from models.relation import Features
 def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out):
     for rel in relations:
         try:

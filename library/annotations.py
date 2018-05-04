@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET, io
 from library.decorators import validate
 from models.entity import Entity
-from models.reference import Reference
+from models.relation import Relation
 from models.document import Document
 from nltk.tokenize import word_tokenize
 
@@ -81,7 +81,7 @@ def parse_xml(file_path, encoding):
                 'text_between': text[ent1.index_b: ent2.index_a],
                 'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
-            references_list.append(Reference(**kwargs_for_relation))
+            references_list.append(Relation(**kwargs_for_relation))
             XML_field.ref_id = []
     return entities_list, references_list
 
@@ -109,7 +109,7 @@ def parse_brat(file_path, encoding):
                 'text_between': text[ent1.index_b: ent2.index_a],
                 'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
-            references_list.append(Reference(**kwargs_for_relation))
+            references_list.append(Relation(**kwargs_for_relation))
 
         elif line.startswith('T'):
             fields = re.split("\t+", line)
@@ -137,7 +137,7 @@ def convert_to_objects(a_paths, corpus, encoding):
             e_list, r_list = parse_xml(path, encoding)
             kwargs_for_doc = {
                 'entities': e_list,
-                'references' : r_list,
+                'relations' : r_list,
                 'annotation_path': path,
                 'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
             }
@@ -147,7 +147,7 @@ def convert_to_objects(a_paths, corpus, encoding):
 
             kwargs_for_doc = {
                 'entities': e_list,
-                'references': r_list,
+                'relations': r_list,
                 'annotation_path': path,
                 'text_path': path.replace('ann','txt'),
             }

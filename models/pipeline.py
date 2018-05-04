@@ -8,7 +8,7 @@ from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 
 from library.lib import SENTENCE_DIVIDERS
-from models.reference import Features
+from models.relation import Features
 __author__ = 'Timur Mardanov'
 
 class PipeLine(object):

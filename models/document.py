@@ -5,6 +5,6 @@ class Document(DynamicFields):
     annotation_path = None
     text_path = None
     entities = []
-    references = []
+    relations = []
 
 

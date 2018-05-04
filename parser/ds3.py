@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from models.document import Document
 from models.entity import Entity
-    
+
 
 def parse_file(basename):
     abstract_fields = ('id', 'title', 'text')

@@ -9,7 +9,7 @@ class Features(Enum):
     InDifferentSentence = 2
 
 
-class Reference(DynamicFields):
+class Relation(DynamicFields):
     # Relation ID
     id = None
 
