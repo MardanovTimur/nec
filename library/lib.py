@@ -49,11 +49,13 @@ FILE_PATTERN_IN_CORPUS = {
 }
 
 
-
 class DynamicFields(object):
 
     def __init__(self, *args, **kwargs):
-        map(lambda item: setattr(self, item[0], item[1]),dict(filter(lambda x: x[1] is not None, kwargs.items())).items())
+        for k, v in kwargs.items():
+            if v is None:
+                continue
+            setattr(self, k, v)
 
     def __str__(self,):
         return str(self.__dict__)
@@ -162,7 +164,7 @@ def count_unique_entites_in_relations(documents):
 
 @validate
 def statistic_of_corpus(app):
-    print 'Count of document: {}'.format(app.document_count)
+    print 'Count of documents: {}'.format(app.document_count)
 
     references_count = reduce(lambda initial, y: initial + len(y.references), app.documents, 0)
     app.references_count = references_count
