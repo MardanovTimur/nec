@@ -110,6 +110,11 @@ def parse_args():
                          help=u'путь-куда-сохранить-сериализованную-языковую-модель, обязательный аргумент',
                          metavar='PATH TO SERIALIZE MODEL', required=REQUIRED, nargs='?')
     '''
+        CUSTOM ARGS
+    '''
+    RPARSER.add_argument('--train-size', help=u'Количество документов из src-train-texts',type=int,
+                         default=999999999, required=False, nargs='?')
+    '''
         F2 and F3
     '''
     PARSER.add_argument('--lm', type=str, help=u'путь к сериализованной языковой модели', required=False)
@@ -180,17 +185,17 @@ def statistic_of_corpus(app):
 
 
 from models.pipeline import PipeLine
-@validate
+#  @validate
 def base_line_model(app, entites_test_list):
     left_test, right_test = (dict(entites_test_list).keys(), dict(entites_test_list).values())
-    left_words, right_words, types = ([], [], [])
+    left_words, right_words, target_statements = ([], [], [])
     for document in app.documents:
         for rel in document.references:
             left_words.append(rel.refAobj.value)
             right_words.append(rel.refBobj.value)
-            types.append(rel.type)
-    pipeline = PipeLine(app, test_counts = 50)
-    pipeline.fit(left_words, right_words, types)
+            target_statements.append(rel.is_fictive)
+    pipeline = PipeLine(app)
+    pipeline.fit(left_words, right_words, target_statements)
     pipeline.transform(left_test, right_test)
     print pipeline.test()
 

@@ -31,4 +31,14 @@ class Reference(DynamicFields):
     # Feature type
     feature_type  = Features.INIT
 
+    # Not fictive
+    is_fictive = False
 
+    def __eq__(self, o):
+        return self.refAobj.type+self.refBobj.type == o.refAobj.type+o.refBobj.type
+
+    def __hash__(self,):
+        '''
+            For getting uniq types
+        '''
+        return hash(self.refAobj.type + self.refBobj.type)

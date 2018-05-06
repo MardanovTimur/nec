@@ -7,6 +7,7 @@ from models.entity import Entity
 from models.reference import Reference
 from models.document import Document
 from nltk.tokenize import word_tokenize
+from sets import Set
 
 
 # Fields realisation for xml childrens
@@ -129,10 +130,28 @@ def parse_brat(file_path, encoding):
 
     return entities_list, references_list
 
+
+def get_fictive_relations(entities, relations):
+    fictive_relations = []
+    # SET IDS of entities, which now in relations
+    persistent_ids = map(lambda rel: (rel.refAobj.id, rel.refBobj.id), relations)
+    relation_set_by_entity_types = Set(relations)
+    for i in range(len(entities)-1):
+        for j in range(i+1, len(entities)):
+            ent1, ent2 = (entities[i], entities[j])
+            rel1 = Reference(**{'refAobj': ent1, 'refBobj': ent2, 'is_fictive': True})
+            rel2 = Reference(**{'refAobj': ent2, 'refBobj': ent1, 'is_fictive': True})
+            filtered_rels = filter(lambda r: r in relation_set_by_entity_types,(rel1, rel2))
+            for rel in filtered_rels:
+                if (rel.refAobj.id, rel.refBobj.id) not in persistent_ids:
+                    fictive_relations.append(rel)
+    return fictive_relations
+
+
 @validate
-def convert_to_objects(a_paths, corpus, encoding):
+def convert_to_objects(a_paths, corpus, encoding, train_size):
     docs = []
-    for path in a_paths:
+    for path in a_paths[:train_size]:
         if ('MADE-1.0' in corpus):
             e_list, r_list = parse_xml(path, encoding)
             kwargs_for_doc = {
@@ -142,15 +161,15 @@ def convert_to_objects(a_paths, corpus, encoding):
                 'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
             }
         elif ('corpus_release' in corpus):
-
             e_list, r_list = parse_brat(path, encoding)
-
             kwargs_for_doc = {
                 'entities': e_list,
                 'references': r_list,
                 'annotation_path': path,
                 'text_path': path.replace('ann','txt'),
             }
+        fictive_relations = get_fictive_relations(e_list, r_list)
+        kwargs_for_doc.update({'references': r_list + fictive_relations})
         docs.append(Document(**kwargs_for_doc))
     return docs
 
