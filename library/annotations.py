@@ -100,6 +100,7 @@ def parse_xml(file_path, encoding):
             XML_field.ref_id = []
     return entities_list, references_list
 
+#corpuse_release dataset annotations
 def parse_brat(file_path, encoding):
     entities_list, references_list = [],[]
     file = codecs.open(file_path,'r', encoding=encoding)
