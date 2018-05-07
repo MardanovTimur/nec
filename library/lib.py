@@ -185,7 +185,7 @@ def statistic_of_corpus(app):
 
 
 from models.pipeline import PipeLine
-#  @validate
+@validate
 def base_line_model(app, entites_test_list):
     left_test, right_test = (dict(entites_test_list).keys(), dict(entites_test_list).values())
     left_words, right_words, target_statements = ([], [], [])
