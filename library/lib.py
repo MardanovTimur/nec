@@ -1,13 +1,10 @@
 #coding=utf-8
-import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
-from nltk import sent_tokenize, word_tokenize, pos_tag
-from nltk.tag import pos_tag
+import argparse
+import io
+import logging
+import os
+
 from library.decorators import validate
-from nltk.tokenize import TweetTokenizer
-import io, numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn import svm
-from sklearn.linear_model.logistic import LogisticRegression
 
 #logger
 logger = logging.getLogger('lib.py')
@@ -42,13 +39,6 @@ SENTENCE_DIVIDERS = ('.', '!', '?')
 # requred variables
 REQUIRED = False
 
-# Patterns for files in corpuses and annotations
-FILE_PATTERN_IN_CORPUS = {
-    u'MADE-1.0': ('*[0-9]_*[0-9]', '*[0-9]_*[0-9].bioc.xml'),
-    u'corpus_release': ('*[0-9].txt', '*[0-9].ann'),
-    u'chemprot': ('*_abstracts.tsv', '*_entities.tsv')
-}
-
 
 class DynamicFields(object):
 
@@ -60,27 +50,6 @@ class DynamicFields(object):
 
     def __str__(self,):
         return str(self.__dict__)
-
-
-'''
-    return count(int), document_names(list of strings)
-'''
-@validate
-def get_filenames_and_count_of_documents(corpus_path):
-    docs, annotations = ([], [])
-    re_pattern = FILE_PATTERN_IN_CORPUS.get(corpus_path.split("/")[0])
-    if re_pattern is not None:
-        for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), corpus_path)):
-            for filename in fnmatch.filter(filenames, re_pattern[0]):
-                docs.append(os.path.join(root, filename))
-            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(docs)))
-            for filename in fnmatch.filter(filenames, re_pattern[1]):
-                annotations.append(os.path.join(root, filename))
-            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-annotations'.format(len(annotations)))
-        return len(docs), docs, annotations
-    else:
-        return 0, (), ()
-
 
 
 '''
@@ -162,44 +131,3 @@ def count_unique_entites_in_relations(documents):
             s.add(rel.refAobj.value)
             s.add(rel.refBobj.value)
     return len(s)
-
-@validate
-def statistic_of_corpus(app):
-    print 'Count of documents: {}'.format(app.document_count)
-
-    references_count = reduce(lambda initial, y: initial + len(y.references), app.documents, 0)
-    app.references_count = references_count
-    print 'Count of references [ALL]: {}'.format(references_count)
-
-    references_sentences = references_in_sentence(app.documents, app.text_encoding)
-    app.set_refs_in_out(references_sentences[0], references_sentences[1])
-    print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'.\
-            format(len(references_sentences[0]), len(references_sentences[1]))
-    del references_sentences
-
-    print 'Count of entities in relations: {}'.format(reduce(lambda c, doc: c+len(doc.references)*2, app.documents, 0))
-    print 'Count of UNIQUE entities in relations: {}'.format(
-        count_unique_entites_in_relations(app.documents))
-
-
-from models.pipeline import PipeLine
-@validate
-def base_line_model(self, entites_test_list):
-    left_test, right_test = (dict(entites_test_list).keys(), dict(entites_test_list).values())
-    left_words, right_words, types = ([], [], [])
-    for document in self.documents:
-        for rel in document.references:
-            left_words.append(rel.refAobj.value)
-            right_words.append(rel.refBobj.value)
-            types.append(rel.type)
-    pipeline = PipeLine(self, test_counts = 50)
-    pipeline.fit(left_words, right_words, types)
-    pipeline.transform(left_test, right_test)
-    print pipeline.test()
-
-    return pipeline
-
-
-
-
-
