@@ -2,30 +2,27 @@ import fnmatch
 import logging
 import os
 
-from library.decorators import validate
-from library.lib import count_unique_entites_in_relations, references_in_sentence, DynamicFields, WORD_TYPES, DATA_PATH
+from library.lib import relations_in_sentence, DynamicFields, WORD_TYPES, DATA_PATH
 from models.pipeline import PipeLine
 
 
 class Corpus(DynamicFields):
     docs = []
-    ref_count = 0
+    relations = []
 
     # Default properies
     text_encoding = "utf-8"
     word_type = WORD_TYPES[0]
     fetures = False
     laplace = False
-    #  unknown_word_freq = 0.5
+    unknown_word_freq = None  # 0.5
 
     doc_pattern = None
     ann_pattern = None
 
-    logger = logging.getLogger('Corpus')
-
     def __init__(self, *args, **kwargs):
-        kwargs = args[0].__dict__
         super(Corpus, self).__init__(*args, **kwargs)
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def first(self, ):
         self.count_items()
@@ -34,13 +31,14 @@ class Corpus(DynamicFields):
 
     def count_items(self):
         docs, annotations = [], []
-        for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), self.path)):
+        for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), self.train_path)):
             for filename in fnmatch.filter(filenames, self.doc_pattern):
                 docs.append(os.path.join(root, filename))
-            self.logger.info('get_filenames_and_count_of_documents EXECUTED, {} documents'.format(len(docs)))
             for filename in fnmatch.filter(filenames, self.ann_pattern):
                 annotations.append(os.path.join(root, filename))
-            self.logger.info('get_filenames_and_count_of_documents EXECUTED, {} annotations'.format(len(annotations)))
+
+        self.logger.info('Counting complete, total {} document files and {} annotation files'
+                         .format(len(docs), len(annotations)))
 
         self.d_paths = docs
         self.a_paths = annotations
@@ -50,22 +48,21 @@ class Corpus(DynamicFields):
 
     @validate
     def print_statistics(self):
-        print 'Count of documents: {}'.format(self.document_count)
+        self.relations = [rel for doc in self.docs for rel in doc.relations]
 
-        references_count = reduce(lambda initial, y: initial + len(y.references), self.documents, 0)
-        self.ref_count = references_count
-        print 'Count of references [ALL]: {}'.format(references_count)
+        print 'Count of documents: {}'.format(len(self.docs))
 
-        references_sentences = references_in_sentence(self.documents, self.text_encoding)
-        self.set_refs_in_out(references_sentences[0], references_sentences[1])
-        print 'Count of references [IN ONE SENTENSE]: {}\nCount of references [IN DIFERRENT SENTENCES]: {}'. \
+        print 'Count of relations [ALL]: {}'.format(len(self.relations))
+
+        references_sentences = relations_in_sentence(self.docs, self.text_encoding)
+        print 'Count of relations [IN ONE SENTENCE]: {}\nCount of relations [IN DIFFERENT SENTENCES]: {}'. \
             format(len(references_sentences[0]), len(references_sentences[1]))
         del references_sentences
 
-        print 'Count of entities in relations: {}'.format(
-            reduce(lambda c, doc: c + len(doc.references) * 2, self.documents, 0))
-        print 'Count of UNIQUE entities in relations: {}'.format(
-            count_unique_entites_in_relations(self.documents))
+        all_relations = sum([[rel.refAobj.value, rel.refBobj.value] for rel in self.relations], [])
+
+        print 'Count of entities in relations: {}'.format(len(all_relations))
+        print 'Count of UNIQUE entities in relations: {}'.format(len(set(all_relations)))
 
     '''
         The data param should be zipped from 2 lists of entyties
@@ -83,8 +80,8 @@ class Corpus(DynamicFields):
     def get_baseline_model(self, data):
         left_test, right_test = (dict(data).keys(), dict(data).values())
         left_words, right_words, types = ([], [], [])
-        for document in self.documents:
-            for rel in document.references:
+        for document in self.docs:
+            for rel in document.relations:
                 left_words.append(rel.refAobj.value)
                 right_words.append(rel.refBobj.value)
                 types.append(rel.type)
@@ -96,11 +93,7 @@ class Corpus(DynamicFields):
         return pipeline
 
     def third(self, ):
-        """
-            Return self -> for choose required type
-            TODO
-        """
-        return self
+        self.relation_in_one_sentence()
 
     def relation_in_one_sentence(self):
         """
@@ -119,12 +112,6 @@ class Corpus(DynamicFields):
         self.pipeline.ref_in_one_wbnull()
         self.pipeline.ref_in_one_wbfl()
 
-    def __getattr__(self, attr):
-        try:
-            return super(Corpus, self).__getattr__()
-        except AttributeError as er:
-            return None
-
     a_paths = ()
 
     @property
@@ -137,14 +124,9 @@ class Corpus(DynamicFields):
     def document_paths(self):
         return self.d_paths
 
-    def get_references_from_documents(self):
-        initial = list()
-        map(lambda doc: initial.extend(doc.references), self.documents)
-        return initial
-
     '''
         Setter for in || out references
     '''
-
     def set_refs_in_out(self, ref_in, ref_out):
-        self.all_references = self.get_references_from_documents()
+        # TODO
+        pass

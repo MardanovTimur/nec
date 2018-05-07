@@ -20,19 +20,19 @@ WORD_HELP = u'<surface_all | surface_no_pm | stem | suffix_X>, где в слу�
         tartarus.org/ ), в случае suffix_X - окончания слов длиной X'
 
 # Define parses for --help functions
-PARSER = argparse.ArgumentParser(description=" Project #1 Shevyakov, Mardanov")
+PARSER = argparse.ArgumentParser(description=" Project #1 Shevyakov, Mardanov, Krylov")
 
 # Choice values in parameters for app
 WORD_TYPES = (
     'surface_all',
     'surface_no_pm',
     'stem',
-    'suffex_X'
+    'suffix_X'
 )
 
 FEATURES_TYPES = (False, True)
 
-SENTENCE_DIVIDERS = ('.', '!', '?')
+SENTENCE_DIVIDERS = {'.', '!', '?'}
 
 # requred variables
 REQUIRED = False
@@ -58,7 +58,7 @@ def parse_args():
         F1
     '''
     RPARSER = PARSER.add_argument_group('required arguments')
-    RPARSER.add_argument('--src-train-texts', type=str,
+    RPARSER.add_argument('--src-train-texts', type=str, dest='train_path',
                          help=u'путь к корпусу, обязательный аргумент,  Данные должны лежать в директории проекта data',
                          metavar='SRC_TRAIN_TEXTS', required=True, nargs='?')
     PARSER.add_argument('--text-encoding', type=str, help=u'кодировка-текста в файлах корпуса',
@@ -76,13 +76,14 @@ def parse_args():
     PARSER.add_argument('--unknown-word-freq', type=int,
                         help=u'частота, ниже которой слова в обуч. множестве считаются неизвестными', nargs='?',
                         required=False)
-    RPARSER.add_argument('-o', type=str,
+    RPARSER.add_argument('-o', type=str, dest='model_out_path',
                          help=u'путь-куда-сохранить-сериализованную-языковую-модель, обязательный аргумент',
                          metavar='PATH TO SERIALIZE MODEL', required=REQUIRED, nargs='?')
     '''
         F2 and F3
     '''
-    PARSER.add_argument('--lm', type=str, help=u'путь к сериализованной языковой модели', required=False)
+    PARSER.add_argument('--lm', type=str, dest='model_path', required=False,
+                        help=u'путь к сериализованной языковой модели')
     RPARSER.add_argument('--src-test-texts', type=str, help=u'путь к тестовой коллекции', required=REQUIRED)
     RPARSER.add_argument('--src-texts', type=str, help=u'путь к коллекции', required=REQUIRED)
     PARSER.add_argument('-o-texts', type=str, help=u'путь для сохранения языковой модели', required=False)
@@ -92,40 +93,35 @@ def parse_args():
 
 
 from models.relation import Features
-def count_ref_in_document(text, entities, relations, text_path, ref_in, ref_out):
-    for rel in relations:
-        try:
-            # old realisation with indexes (quickly)
-            #  ent1, ent2 = sorted(filter(lambda entity: entity.id in (rel.refA, rel.refB), entities), key=lambda x: x.index_a)
-            ent1, ent2 = (rel.refAobj, rel.refBobj)
-            if len(set(SENTENCE_DIVIDERS).intersection(set(text[ent1.index_b: ent2.index_a])))==0:
-                rel.feature_type =  Features.InOneSentence
-                ref_in.append(rel)
-            else:
-                rel.feature_type =  Features.InDifferentSentence
-                ref_out.append(rel)
-        except:
-            '''
-                If annotations is not correct.
-            '''
+
+
+def count_rels(doc):
+    ref_in, ref_out = [], []
+    for rel in doc.relations:
+        ent1, ent2 = (rel.refAobj, rel.refBobj)
+        if len(SENTENCE_DIVIDERS.intersection(set(doc.text[ent1.index_b: ent2.index_a]))) == 0:
+            rel.feature_type = Features.InOneSentence
+            ref_in.append(rel)
+        else:
+            rel.feature_type = Features.InDifferentSentence
+            ref_out.append(rel)
+
+    return ref_in, ref_out
+
 
 '''
     count_in - Count In one sentence
     count_out - Count In different sentences
 '''
-def references_in_sentence(documents, encoding):
+def relations_in_sentence(documents, encoding):
     references_in_one_sentence, references_in_different_sentences = ([], [])
-    for document in documents:
-        with io.open(document.text_path, encoding='{}'.format(encoding)) as f:
-            text = f.read()
-            count_ref_in_document(text, document.entities, document.references, document.text_path,
-                                  references_in_one_sentence, references_in_different_sentences)
-    return references_in_one_sentence, references_in_different_sentences
 
-def count_unique_entites_in_relations(documents):
-    s = set()
     for doc in documents:
-        for rel in doc.references:
-            s.add(rel.refAobj.value)
-            s.add(rel.refBobj.value)
-    return len(s)
+        if doc.text is None:
+            doc.text = io.open(doc.text_path, encoding='{}'.format(encoding)).read()
+
+        loc_in, loc_out = count_rels(doc)
+        references_in_one_sentence += loc_in
+        references_in_different_sentences += loc_out
+
+    return references_in_one_sentence, references_in_different_sentences

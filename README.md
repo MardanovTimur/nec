@@ -1,5 +1,5 @@
 # nec
-```Mardanov Timur; Shevyakov Ivan```
+```Mardanov Timur; Shevyakov Ivan; Krylov Anton```
 
 SUPER HOT PROJECT
 ======

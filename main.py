@@ -5,11 +5,6 @@ from chemprot import ChemprotCorpus
 from library.lib import parse_args
 from made import MadeCorpus
 
-logging.basicConfig(filename="app.log",
-                    level=logging.INFO,
-                    format ='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-logger = logging.getLogger('main.py')
 
 CORPUS_CLS = {
     u'MADE-1.0': MadeCorpus,
@@ -18,8 +13,14 @@ CORPUS_CLS = {
 }
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger()
+
+    fh = logging.FileHandler('./app.log')
+    logger.addHandler(fh)
+
     args = parse_args()
-    corpus = CORPUS_CLS[args.SRC_TRAIN_TEXTS](args)
+    corpus = CORPUS_CLS[args.train_path](**args.__dict__)
 
     #----------------------------------------------------------------------------
     logger.info("First task started : Find relations")
@@ -39,5 +40,5 @@ if __name__ == '__main__':
     logger.info("Third task started : Add extra features for data")
     #---------------------------A-------------------------------------------
     logger.info("Third task started : Extra features for relation in one sentence")
-    corpus.third().relation_in_one_sentence()
+    corpus.third()
     #-----------------------------------------------------------------------

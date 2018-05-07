@@ -11,7 +11,7 @@ class MadeCorpus(Corpus):
     def parse_objects(self):
         docs = []
         for path in self.a_paths:
-            e_list, r_list = parse_xml(path, self.encoding)
+            e_list, r_list = parse_xml(path, self.text_encoding)
             kwargs_for_doc = {
                 'entities': e_list,
                 'relations': r_list,
