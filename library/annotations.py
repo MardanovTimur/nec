@@ -37,12 +37,13 @@ class XML_field(object):
                 xml_obj.ref_id.append(int(item.attrib['refid']))
         return xml_obj
 
+
 def read_doc(file_path, encoding):
     with io.open(file_path, encoding=encoding) as f:
         return f.read()
 
 
-#MADE-1.0 dataset annotations
+# MADE-1.0 dataset annotations
 def parse_xml(file_path, encoding):
 
     text = read_doc(file_path.replace('annotations', 'corpus').replace('.bioc.xml', ''), encoding)
@@ -84,6 +85,7 @@ def parse_xml(file_path, encoding):
             references_list.append(Relation(**kwargs_for_relation))
             XML_field.ref_id = []
     return entities_list, references_list
+
 
 def parse_brat(file_path, encoding):
     entities_list, references_list = [],[]
@@ -128,29 +130,3 @@ def parse_brat(file_path, encoding):
             entities_list.append(Entity(**kwargs_for_entity))
 
     return entities_list, references_list
-
-@validate
-def convert_to_objects(a_paths, corpus, encoding):
-    docs = []
-    for path in a_paths:
-        if ('MADE-1.0' in corpus):
-            e_list, r_list = parse_xml(path, encoding)
-            kwargs_for_doc = {
-                'entities': e_list,
-                'relations' : r_list,
-                'annotation_path': path,
-                'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
-            }
-        elif ('corpus_release' in corpus):
-
-            e_list, r_list = parse_brat(path, encoding)
-
-            kwargs_for_doc = {
-                'entities': e_list,
-                'relations': r_list,
-                'annotation_path': path,
-                'text_path': path.replace('ann','txt'),
-            }
-        docs.append(Document(**kwargs_for_doc))
-    return docs
-

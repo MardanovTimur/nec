@@ -11,6 +11,7 @@ from library.lib import SENTENCE_DIVIDERS
 from models.relation import Features
 __author__ = 'Timur Mardanov'
 
+
 class PipeLine(object):
     leftVec = None
     rightVec = None

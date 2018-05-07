@@ -44,8 +44,9 @@ REQUIRED = False
 
 # Patterns for files in corpuses and annotations
 FILE_PATTERN_IN_CORPUS = {
-    u'MADE-1.0': ['*[0-9]_*[0-9]', '*[0-9]_*[0-9].bioc.xml'],
-    u'corpus_release': ['*[0-9].txt', '*[0-9].ann'],
+    u'MADE-1.0': ('*[0-9]_*[0-9]', '*[0-9]_*[0-9].bioc.xml'),
+    u'corpus_release': ('*[0-9].txt', '*[0-9].ann'),
+    u'chemprot': ('*_abstracts.tsv', '*_entities.tsv')
 }
 
 
@@ -66,17 +67,17 @@ class DynamicFields(object):
 '''
 @validate
 def get_filenames_and_count_of_documents(corpus_path):
-    matches, annotations = ([], [])
+    docs, annotations = ([], [])
     re_pattern = FILE_PATTERN_IN_CORPUS.get(corpus_path.split("/")[0])
     if re_pattern is not None:
         for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), corpus_path)):
             for filename in fnmatch.filter(filenames, re_pattern[0]):
-                matches.append(os.path.join(root, filename))
-            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(matches)))
+                docs.append(os.path.join(root, filename))
+            logger.info('get_filenames_and_count_of_documents EXECUTED, {}-documents'.format(len(docs)))
             for filename in fnmatch.filter(filenames, re_pattern[1]):
                 annotations.append(os.path.join(root, filename))
             logger.info('get_filenames_and_count_of_documents EXECUTED, {}-annotations'.format(len(annotations)))
-        return len(matches), matches, annotations
+        return len(docs), docs, annotations
     else:
         return 0, (), ()
 
@@ -176,22 +177,22 @@ def statistic_of_corpus(app):
             format(len(references_sentences[0]), len(references_sentences[1]))
     del references_sentences
 
-    print 'Count of entities in relations: {}'.format(reduce(lambda c, doc: c+len(doc.references)*2,app.documents,0))
+    print 'Count of entities in relations: {}'.format(reduce(lambda c, doc: c+len(doc.references)*2, app.documents, 0))
     print 'Count of UNIQUE entities in relations: {}'.format(
         count_unique_entites_in_relations(app.documents))
 
 
 from models.pipeline import PipeLine
 @validate
-def base_line_model(app, entites_test_list):
+def base_line_model(self, entites_test_list):
     left_test, right_test = (dict(entites_test_list).keys(), dict(entites_test_list).values())
     left_words, right_words, types = ([], [], [])
-    for document in app.documents:
+    for document in self.documents:
         for rel in document.references:
             left_words.append(rel.refAobj.value)
             right_words.append(rel.refBobj.value)
             types.append(rel.type)
-    pipeline = PipeLine(app, test_counts = 50)
+    pipeline = PipeLine(self, test_counts = 50)
     pipeline.fit(left_words, right_words, types)
     pipeline.transform(left_test, right_test)
     print pipeline.test()
