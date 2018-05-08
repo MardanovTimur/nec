@@ -42,6 +42,19 @@ def read_doc(file_path, encoding):
     with io.open(file_path, encoding=encoding) as f:
         return f.read()
 
+def get_sentence_in_entities(text, ent1, ent2):
+    if (ent1.index_a > ent2.index_b):
+        #Bubble??
+        buble = ent1
+        ent1 = ent2
+        ent2 = buble
+    indA = ent1.index_a
+    indB = ent2.index_b
+    text_before_a = text[:indA]
+    text_after_b = text[indB:]
+    text_before_a_and_after_dot = text_before_a[(None if text_before_a.rfind('.') == -1 else text_before_a.rfind('.') + 1):]
+    text_after_b_and_before_dot = text_after_b[:(None if text_after_b.find('.') == -1 else text_after_b.find(('.')) )]
+    return " ".join([text_before_a_and_after_dot, text[indA:indB] , text_after_b_and_before_dot])
 
 #MADE-1.0 dataset annotations
 def parse_xml(file_path, encoding):
@@ -68,9 +81,9 @@ def parse_xml(file_path, encoding):
 
             entities = [filter(lambda ent: ent.id == xml_fields_obj.ref_id[0], entities_list)[0],
                          filter(lambda ent: ent.id == xml_fields_obj.ref_id[1], entities_list)[0]]
-            if (xml_fields_obj.ref_id[0] > xml_fields_obj.ref_id[1]):
-                entities.reverse()
             ent1, ent2 = entities
+
+            _sentence_ = get_sentence_in_entities(text, ent1, ent2)
 
             kwargs_for_relation = {
                 'id': int(entity.attrib['id']),
@@ -79,6 +92,7 @@ def parse_xml(file_path, encoding):
                 'refB' : xml_fields_obj.ref_id[1],
                 'refAobj': ent1,
                 'refBobj': ent2,
+                'text' : _sentence_,
                 'text_between': text[ent1.index_b: ent2.index_a],
                 'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
@@ -100,6 +114,9 @@ def parse_brat(file_path, encoding):
             entities = [filter(lambda ent: ent.id == int(refA), entities_list)[0],
                         filter(lambda ent: ent.id == int(refB), entities_list)[0]]
             ent1, ent2 = entities
+
+            _sentence_ = get_sentence_in_entities(text, ent1, ent2)
+
             kwargs_for_relation = {
                 'id': int(id.replace('R','')),
                 'type': relation_type,
@@ -107,6 +124,7 @@ def parse_brat(file_path, encoding):
                 'refB': int(refB),
                 'refAobj': filter(lambda ent: ent.id == int(refA), entities_list)[0],
                 'refBobj': filter(lambda ent: ent.id == int(refB), entities_list)[0],
+                'text': _sentence_,
                 'text_between': text[ent1.index_b: ent2.index_a],
                 'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }
@@ -131,16 +149,20 @@ def parse_brat(file_path, encoding):
     return entities_list, references_list
 
 
-def get_fictive_relations(entities, relations):
+def get_fictive_relations(entities, relations, text_path, encoding):
     fictive_relations = []
     # SET IDS of entities, which now in relations
     persistent_ids = map(lambda rel: (rel.refAobj.id, rel.refBobj.id), relations)
     relation_set_by_entity_types = Set(relations)
+    with io.open(text_path, encoding=encoding) as file:
+        text = file.read()
     for i in range(len(entities)-1):
         for j in range(i+1, len(entities)):
             ent1, ent2 = (entities[i], entities[j])
-            rel1 = Reference(**{'refAobj': ent1, 'refBobj': ent2, 'is_fictive': True})
-            rel2 = Reference(**{'refAobj': ent2, 'refBobj': ent1, 'is_fictive': True})
+            _sentence_1 = get_sentence_in_entities(text,ent1, ent2,)
+            rel1 = Reference(**{'refAobj': ent1, 'refBobj': ent2, 'is_fictive': True, 'text': _sentence_1})
+            _sentence_2 = get_sentence_in_entities(text,ent2, ent1,)
+            rel2 = Reference(**{'refAobj': ent2, 'refBobj': ent1, 'is_fictive': True, 'text': _sentence_2})
             filtered_rels = filter(lambda r: r in relation_set_by_entity_types,(rel1, rel2))
             for rel in filtered_rels:
                 if (rel.refAobj.id, rel.refBobj.id) not in persistent_ids:
@@ -168,7 +190,7 @@ def convert_to_objects(a_paths, corpus, encoding, train_size):
                 'annotation_path': path,
                 'text_path': path.replace('ann','txt'),
             }
-        fictive_relations = get_fictive_relations(e_list, r_list)
+        fictive_relations = get_fictive_relations(e_list, r_list, kwargs_for_doc.get('text_path'), encoding)
         kwargs_for_doc.update({'references': r_list + fictive_relations})
         docs.append(Document(**kwargs_for_doc))
     return docs

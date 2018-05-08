@@ -5,6 +5,7 @@ from library.annotations import convert_to_objects
 from library.lib import statistic_of_corpus
 from library.lib import base_line_model
 import numpy as np
+import os
 
 logging.basicConfig(filename="app.log",
                     level=logging.INFO,
@@ -21,6 +22,9 @@ class App(DynamicFields):
     word_type = WORD_TYPES[0]
     fetures=False
     laplace=False
+
+    #Path of project
+    BASE_PATH = os.path.dirname(__file__)
     #  unknown_word_freq = 0.5
 
     def __init__(self, *args, **kwargs):
@@ -62,11 +66,18 @@ class App(DynamicFields):
                 WBFL(when only one word in between),
             ]
         '''
-        self.pipeline.ref_in_one_cpos()
-        self.pipeline.ref_in_one_wvnull()
-        self.pipeline.ref_in_one_wvfl()
-        self.pipeline.ref_in_one_wbnull()
-        self.pipeline.ref_in_one_wbfl()
+        #  self.pipeline.ref_in_one_cpos()
+        #  self.pipeline.ref_in_one_wvnull()
+        #  self.pipeline.ref_in_one_wvfl()
+        #  self.pipeline.ref_in_one_wbnull()
+        #  self.pipeline.ref_in_one_wbfl()
+        self.pipeline.init_stanford_dependency_searching()
+        try:
+            self.pipeline.ref_in_one_dpr2c()
+        except Exception as e:
+            print(e.message)
+        finally:
+            self.pipeline.dependency_core.close()
 
 
     def __getattr__(self, attr):

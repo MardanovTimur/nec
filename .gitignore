@@ -8,6 +8,7 @@ __pycache__/
 
 #NLP extensions
 data/*
+stanford_nlp/*
 
 
 # Distribution / packaging

@@ -1,5 +1,8 @@
 #coding=utf-8
+__author__ = 'Timur Mardanov'
+
 import codecs
+import os
 
 from sklearn.linear_model.logistic import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -9,7 +12,7 @@ from nltk.tokenize import word_tokenize
 
 from library.lib import SENTENCE_DIVIDERS
 from models.reference import Features
-__author__ = 'Timur Mardanov'
+from stanfordcorenlp import StanfordCoreNLP
 
 class PipeLine(object):
     leftVec = None
@@ -66,6 +69,10 @@ class PipeLine(object):
         rData = self.rightVec.transform(right_words).toarray()
         self.test_data = np.append(lData, rData, axis=1)
 
+
+    def init_stanford_dependency_searching(self, ):
+        self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(self.app.BASE_PATH, 'stanford_nlp')))
+
     def test(self,):
         return self.classifyer.predict(self.test_data)
 
@@ -106,7 +113,43 @@ class PipeLine(object):
 
 
     #------------------------------------------------------------------------
-    #                      3task ты что дурак?
+    #                      3task B
+    #------------------------------------------------------------------------
+
+    #B1
+    def ref_in_one_dpr2c(self):
+        #DPR2C
+        print '\nDPR2C calculation'
+        cpos = np.array([calculate_dpr2c_in_one_sentence(self.app, self.dependency_core)])
+        self.matrix = np.append(self.matrix, cpos.T, axis=1)
+
+    #B2
+    def ref_in_one_dpr2d(self):
+        #DPR2D
+        print 'DPR2D calculation'
+        self.matrix = np.append(self.matrix, np.array([calculate_dpr2d_in_one_sentence(self.app, self.dependency_core)]).T, axis=1)
+
+    #B3
+    def ref_in_one_wcdd(self):
+        #WCDD
+        print 'WCDD calculation'
+        self.matrix = np.hstack([self.matrix, np.array([calculate_wcdd_in_one_sentence(self.app, self.dependency_core)]).T])
+
+    #B4
+    def ref_in_one_wrcd(self):
+        #WRCD
+        print 'WRCD calculation'
+        self.matrix = np.hstack([self.matrix, np.array([calculate_wrcd_in_one_sentence(self.app, self.dependency_core)]).T])
+
+    #B5
+    def ref_in_one_wrdd(self):
+        #WRDD
+        print 'WRDD calculation'
+        self.matrix = np.hstack([self.matrix, np.array([calculate_wrdd_in_one_sentence(self.app, self.dependency_core)]).T])
+
+
+    #------------------------------------------------------------------------
+    #                      3task C
     #------------------------------------------------------------------------
     #C1
     def ref_in_diff_sdist(self):
@@ -125,9 +168,6 @@ class PipeLine(object):
         print 'CRFQ calculation'
         self.matrixA = np.hstack([self.matrix, np.array([calculate_entity_freq_in_doc_in_diff_sentence(self.app, left=False)]).T])
 
-#------------------------------------------------------------------------
-#                      3task (C part)
-#------------------------------------------------------------------------
 
 
 
@@ -175,8 +215,46 @@ def calculate_wbfl_in_one_sentence(app):
     references = app.all_references
     return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
 
+
 #=============================================================================
-#                       3 task B realisation( осторожно. снизу кривой код)
+#                       3 task B realisation
+#=============================================================================
+
+def build_tree(elements, ):
+    pass
+
+def calculate_dpr2c_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    for reference in references:
+        tokenized_text = dependency_core.word_tokenize(reference.text)
+        tree = dependency_core.dependency_parse(reference.text)
+        print len(tree)
+        root_index = tree[0][2]
+        print tree
+    return map(lambda reference: pos_tag(word_tokenize(reference.refAobj.value),
+                         tagset='universal')[0][1] if reference.feature_type == Features.InOneSentence else 'NO',references)
+
+def calculate_dpr2d_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    return map(lambda reference: \
+               verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
+                    if reference.feature_type == Features.InOneSentence else -1, references)
+
+def calculate_wcdd_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    return map(lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
+               if reference.feature_type == Features.InOneSentence else -1,references)
+
+def calculate_wrcd_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    return map(lambda reference: int(bool(len(reference.text_between))) if reference.feature_type == Features.InOneSentence else -1,references)
+
+def calculate_wrdd_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
+
+#=============================================================================
+#                       3 task C realisation
 #=============================================================================
 
 def calculate_sdist_in_diff_sentence(app):
