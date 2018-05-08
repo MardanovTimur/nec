@@ -13,9 +13,9 @@ class BratCorpus(Corpus):
     doc_pattern = '*[0-9].txt'
     ann_pattern = '*[0-9].ann'
 
-    def parse_objects(self):
+    def parse_objects(self, d_paths, a_paths):
         docs = []
-        for path in self.a_paths:
+        for path in a_paths:
             e_list, r_list = parse_brat(path, self.text_encoding)
             kwargs_for_doc = {
                 'entities': e_list,
@@ -26,7 +26,6 @@ class BratCorpus(Corpus):
             docs.append(Document(**kwargs_for_doc))
             if len(docs) >= self.train_size:
                 break
-        self.docs = docs
         return docs
 
 

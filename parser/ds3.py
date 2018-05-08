@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 
+from library.annotations import get_fictive_relations
 from models.document import Document
 from models.entity import Entity
 from models.relation import Relation
@@ -46,6 +47,7 @@ def parse_dataset(basename, with_y=False):
         doc = Document(**line_to_dict(l, abstract_fields))
         doc.entities = doc_entities[doc.id]
         doc.relations = doc_relations[doc.id]
+        doc.relations += get_fictive_relations(doc.entities, doc.relations)
         yield doc
 
 

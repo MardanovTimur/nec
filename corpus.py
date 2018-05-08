@@ -2,6 +2,8 @@ import fnmatch
 import logging
 import os
 
+from sklearn.model_selection import KFold, cross_validate
+
 from library.lib import relations_in_sentence, DynamicFields, WORD_TYPES, DATA_PATH
 from models.pipeline import PipeLine
 
@@ -25,28 +27,25 @@ class Corpus(DynamicFields):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def first(self, ):
-        self.count_items()
-        self.parse_objects()
+        self.d_paths, self.a_paths = self.get_paths(self.train_path)
+        self.docs = self.parse_objects(self.d_paths, self.a_paths)
         self.print_statistics()
 
-    def count_items(self):
+    def get_paths(self, basedir):
         docs, annotations = [], []
-        for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), self.train_path)):
+        for root, dirnames, filenames in os.walk(os.path.join(os.path.abspath(DATA_PATH), basedir)):
             for filename in fnmatch.filter(filenames, self.doc_pattern):
                 docs.append(os.path.join(root, filename))
             for filename in fnmatch.filter(filenames, self.ann_pattern):
                 annotations.append(os.path.join(root, filename))
 
-        self.logger.info('Counting complete, total {} document files and {} annotation files'
-                         .format(len(docs), len(annotations)))
+        self.logger.info('Found {} document files and {} annotation files'.format(len(docs), len(annotations)))
 
-        self.d_paths = docs
-        self.a_paths = annotations
+        return docs, annotations
 
-    def parse_objects(self):
+    def parse_objects(self, d_paths, a_paths):
         raise NotImplementedError()
 
-    @validate
     def print_statistics(self):
         self.relations = [rel for doc in self.docs for rel in doc.relations]
 
@@ -59,58 +58,46 @@ class Corpus(DynamicFields):
             format(len(references_sentences[0]), len(references_sentences[1]))
         del references_sentences
 
-        all_relations = sum([[rel.refAobj.value, rel.refBobj.value] for rel in self.relations], [])
+        all_relations = [rel.refAobj.value for rel in self.relations] + [rel.refBobj.value for rel in self.relations]
 
         print 'Count of entities in relations: {}'.format(len(all_relations))
         print 'Count of UNIQUE entities in relations: {}'.format(len(set(all_relations)))
 
-    '''
-        The data param should be zipped from 2 lists of entyties
-        Example:
-            data = zip(('ledocaine', 'word1'),('anesthesia', 'word2'))
-            ent0[0] = ledocaine; ent0[1] = anesthesia
-            ent1[0] = word1; ent1[1] = word2
+    def second(self):
+        train_y = [rel.is_fictive for rel in self.relations]
 
-        Save current pipeline
-    '''
-
-    def second(self, data):
-        self.pipeline = self.get_baseline_model(data)
-
-    def get_baseline_model(self, data):
-        left_test, right_test = (dict(data).keys(), dict(data).values())
-        left_words, right_words, target_statements = ([], [], [])
-        for document in self.docs:
-            for rel in document.references:
-                left_words.append(rel.refAobj.value)
-                right_words.append(rel.refBobj.value)
-                target_statements.append(rel.is_fictive)
-        pipeline = PipeLine(self)
-        pipeline.fit(left_words, right_words, target_statements)
-        pipeline.transform(left_test, right_test)
-        print pipeline.test()
-
+        pipeline = PipeLine(self, False)
+        pipeline.fit(self.relations, train_y)
         return pipeline
 
     def third(self, ):
-        self.relation_in_one_sentence()
+        train_y = [rel.is_fictive for rel in self.relations]
 
-    def relation_in_one_sentence(self):
-        """
-        Features:
-            Relation in sentence = [
-                CPOS(part of speech in relation),
-                WVNULL(when no verb in between),
-                WVFL(when only verb in between),
-                WBNULL(no words in between)],
-                WBFL(when only one word in between),
-            ]
-        """
-        self.pipeline.ref_in_one_cpos()
-        self.pipeline.ref_in_one_wvnull()
-        self.pipeline.ref_in_one_wvfl()
-        self.pipeline.ref_in_one_wbnull()
-        self.pipeline.ref_in_one_wbfl()
+        pipeline = PipeLine(self, True)
+        pipeline.fit(self.relations, train_y)
+        self.pipeline = pipeline
+        return pipeline
+
+    def fourth(self):
+        train_y = [rel.is_fictive for rel in self.relations]
+        scoring = ['precision', 'recall', 'f1']
+
+        kf = KFold(n_splits=5)
+        self.logger.info('CV start')
+        cv_results = cross_validate(PipeLine(self, True).pipeline, self.relations, train_y, cv=kf, scoring=scoring, verbose=1)
+        self.logger.info('CV end')
+
+        print(cv_results)
+
+        print('Train results: ')
+        for metric in scoring:
+            res = cv_results['train_'+metric]
+            print('%15s: %a; mean: %.2f; stdev: %.2f'.format(metric, res, res.mean(), res.std()))
+
+        print('Test results: ')
+        for metric in scoring:
+            res = cv_results['test_'+metric]
+            print('%15s: %a; mean: %.2f; stdev: %.2f'.format(metric, res, res.mean(), res.std()))
 
     a_paths = ()
 
