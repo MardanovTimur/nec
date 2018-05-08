@@ -35,6 +35,7 @@ def parse_brat(file_path, encoding):
     file = codecs.open(file_path,'r', encoding=encoding)
     lines = file.readlines()
     text = read_doc(file_path.replace('ann','txt'),encoding)
+    doc_id = file_path
     for line in lines:
         if line.startswith('R'):
             id, relation_info = re.split('\t', line)[:2]
@@ -64,6 +65,7 @@ def parse_brat(file_path, encoding):
             value = fields[2].replace('\n', '')
             kwargs_for_entity = {
                 'id': int(id),
+                'doc_id': doc_id,
                 'length': int(indexB) - int(indexA),
                 'index_a': int(indexA),
                 'index_b': int(indexB),

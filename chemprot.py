@@ -6,12 +6,12 @@ class ChemprotCorpus(Corpus):
     doc_pattern = '*_abstracts.tsv'
     ann_pattern = '*_entities.tsv'
 
-    def parse_objects(self):
-        basenames = [path.replace('_entities.tsv', '') for path in self.a_paths]
+    def parse_objects(self, d_paths, a_paths):
+        basenames = [path.replace('_entities.tsv', '') for path in a_paths]
 
         docs = []
 
         for basename in basenames:
             docs += list(parse_dataset(basename, True))
 
-        self.docs = docs
+        return docs
