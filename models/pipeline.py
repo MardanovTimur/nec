@@ -1,16 +1,18 @@
 #coding=utf-8
 import codecs
 import pickle
+from collections import defaultdict
 
-from sklearn.linear_model.logistic import LogisticRegression
-from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
-from scipy.sparse import hstack, lil_matrix
+from scipy.sparse import hstack
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model.logistic import LogisticRegression
 
 from library.lib import SENTENCE_DIVIDERS
 from models.relation import Features
+
 __author__ = 'Timur Mardanov'
 
 
@@ -31,6 +33,8 @@ class PipeLine(object):
         self.rightVec = self.get_vectorizer(app)
         self.classifier = LogisticRegression(n_jobs=4, solver='lbfgs')
 
+        self.pos_ids = defaultdict(lambda: len(self.pos_ids.items()))
+
     def save(self, path):
         pickle.dump(self, open(path, 'wb'))
 
@@ -48,9 +52,12 @@ class PipeLine(object):
         )
 
     def fit(self, left_words, right_words, types):
-        lData = self.leftVec.fit_transform(left_words).toarray()
-        rData = self.rightVec.fit_transform(right_words).toarray()
-        self.matrix = np.append(lData, rData, axis=1)
+        lData = self.leftVec.fit_transform(left_words)
+        rData = self.rightVec.fit_transform(right_words)
+        self.matrix = hstack((lData, rData))
+
+        # Convert to usable format after construction
+        self.matrix = self.matrix.tocsr()
         if self.test_counts is not None:
             self.classifier.fit(self.matrix[:self.test_counts], types[:self.test_counts])
         else:
@@ -68,32 +75,32 @@ class PipeLine(object):
     def ref_in_one_cpos(self):
         #CPOS
         print 'CPOS calculation'
-        cpos = np.array([calculate_cpos_in_one_sentence(self.app)])
-        self.matrix = np.append(self.matrix, cpos.T, axis=1)
+        cpos = np.array([self.pos_ids[pos] for pos in calculate_cpos_in_one_sentence(self.app)])
+        self.matrix = hstack((self.matrix, cpos.T))
 
     #A2
     def ref_in_one_wvnull(self):
         #WVNULL
         print 'WVNULL calculation'
-        self.matrix = np.hstack([self.matrix, np.array(calculate_wvnull_in_one_sentence(self.app)).T])
+        self.matrix = hstack((self.matrix, np.array([calculate_wvnull_in_one_sentence(self.app)]).T))
 
     #A3
     def ref_in_one_wvfl(self):
         #WVFL
         print 'WVFL calculation'
-        self.matrix = np.hstack([self.matrix, np.array(calculate_wvfl_in_one_sentence(self.app)).T])
+        self.matrix = hstack([self.matrix, np.array([calculate_wvfl_in_one_sentence(self.app)]).T])
 
     #A4
     def ref_in_one_wbnull(self):
         #WBNULL
         print 'WBNULL calculation'
-        self.matrix = np.hstack([self.matrix, np.array(calculate_wbnull_in_one_sentence(self.app)).T])
+        self.matrix = hstack([self.matrix, np.array([calculate_wbnull_in_one_sentence(self.app)]).T])
 
     #A5
     def ref_in_one_wbfl(self):
         #WBFL
         print 'WBFL calculation'
-        self.matrix = np.hstack([self.matrix, np.array(calculate_wbfl_in_one_sentence(self.app)).T])
+        self.matrix = hstack([self.matrix, np.array([calculate_wbfl_in_one_sentence(self.app)]).T])
 
 
     #------------------------------------------------------------------------
@@ -136,9 +143,11 @@ def only_one_verb_in_sentence(tagged):
 
 # CPOS (pos_tag of first entity)
 def calculate_cpos_in_one_sentence(app):
-    references = app.relations
-    return map(lambda reference: pos_tag(word_tokenize(reference.refAobj.value),
-                         tagset='universal')[0][1] if reference.feature_type == Features.InOneSentence else -1,references)
+    rels = app.relations
+    return map(
+        lambda rel: pos_tag(word_tokenize(rel.refAobj.value), tagset='universal')[0][1]
+        if rel.feature_type == Features.InOneSentence else -1,
+        rels)
 
 # no verb between
 def calculate_wvnull_in_one_sentence(app):
