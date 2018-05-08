@@ -34,7 +34,7 @@ if __name__ == '__main__':
     '''
     ent2 = ('anesthesia', )
     ent1 = ('ledocaine',)
-    corpus.second(zip(ent1, ent2))
+    corpus.second()
 
     #----------------------------------------------------------------------------
     logger.info("Third task started : Add extra features for data")
@@ -42,3 +42,8 @@ if __name__ == '__main__':
     logger.info("Third task started : Extra features for relation in one sentence")
     corpus.third()
     #-----------------------------------------------------------------------
+    logger.info('Fourth task started')
+    corpus.fourth()
+    logger.info('Fourth task finished')
+
+
