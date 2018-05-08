@@ -1,4 +1,5 @@
 from corpus import Corpus
+from parser.ds3 import parse_dataset
 
 
 class ChemprotCorpus(Corpus):
@@ -6,5 +7,11 @@ class ChemprotCorpus(Corpus):
     ann_pattern = '*_entities.tsv'
 
     def parse_objects(self):
-        # TODO
-        pass
+        basenames = [path.replace('_entities.tsv', '') for path in self.a_paths]
+
+        docs = []
+
+        for basename in basenames:
+            docs += list(parse_dataset(basename, True))
+
+        self.docs = docs
