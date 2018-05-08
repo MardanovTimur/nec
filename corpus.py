@@ -79,14 +79,14 @@ class Corpus(DynamicFields):
 
     def get_baseline_model(self, data):
         left_test, right_test = (dict(data).keys(), dict(data).values())
-        left_words, right_words, types = ([], [], [])
+        left_words, right_words, target_statements = ([], [], [])
         for document in self.docs:
-            for rel in document.relations:
+            for rel in document.references:
                 left_words.append(rel.refAobj.value)
                 right_words.append(rel.refBobj.value)
-                types.append(rel.type)
-        pipeline = PipeLine(self, test_counts=50)
-        pipeline.fit(left_words, right_words, types)
+                target_statements.append(rel.is_fictive)
+        pipeline = PipeLine(self)
+        pipeline.fit(left_words, right_words, target_statements)
         pipeline.transform(left_test, right_test)
         print pipeline.test()
 

@@ -80,6 +80,11 @@ def parse_args():
                          help=u'путь-куда-сохранить-сериализованную-языковую-модель, обязательный аргумент',
                          metavar='PATH TO SERIALIZE MODEL', required=REQUIRED, nargs='?')
     '''
+        CUSTOM ARGS
+    '''
+    RPARSER.add_argument('--train-size', help=u'Количество документов из src-train-texts',type=int,
+                         default=999999999, required=False, nargs='?')
+    '''
         F2 and F3
     '''
     PARSER.add_argument('--lm', type=str, dest='model_path', required=False,

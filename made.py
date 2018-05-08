@@ -1,5 +1,5 @@
 from corpus import Corpus
-from library.annotations import parse_xml
+from library.annotations import parse_xml, get_fictive_relations
 from models.document import Document
 
 
@@ -14,10 +14,12 @@ class MadeCorpus(Corpus):
             e_list, r_list = parse_xml(path, self.text_encoding)
             kwargs_for_doc = {
                 'entities': e_list,
-                'relations': r_list,
+                'relations': r_list + get_fictive_relations(e_list, r_list),
                 'annotation_path': path,
                 'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
             }
             docs.append(Document(**kwargs_for_doc))
+            if len(docs) >= self.train_size:
+                break
         self.docs = docs
         return docs
