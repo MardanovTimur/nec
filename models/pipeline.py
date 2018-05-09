@@ -58,7 +58,6 @@ class PipeLine(object):
         '''
             Init pipeline
         '''
-        self.app = app
         self.pos_ids = defaultdict(lambda: len(self.pos_ids.items()))
 
         estimators = [
@@ -81,14 +80,13 @@ class PipeLine(object):
         self.pipeline = Pipeline([
             ('all_features', FeatureUnion(estimators, n_jobs=self.classifier_n_jobs)),
             ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
-        ], memory='./cache')
+        ])
 
     def save(self, path):
-        pickle.dump(self, open(path, 'wb'))
+        pickle.dump(self.pipeline, open(path, 'wb'))
 
-    @classmethod
-    def load(cls, path):
-        return pickle.load(open(path, 'rb'))
+    def load(self, path):
+        self.pipeline = pickle.load(open(path, 'rb'))
 
     def get_vectorizer(self, app, left):
         '''
@@ -107,8 +105,7 @@ class PipeLine(object):
         '''
             Fit model
         '''
-        self.target = types
-        self.pipeline.fit(relations, self.target)
+        self.pipeline.fit(relations, types)
 
     def test(self, test_relations):
         return self.pipeline.predict(test_relations)
@@ -186,14 +183,15 @@ def calculate_entity_freq_in_doc_in_diff_sentence(rels, left=True):
 
     def ent(rel):
         return rel.refAobj if left else rel.refBobj
+
     for rel in rels:
         counts[ent(rel).doc_id][ent(rel).value] += 1
-
     return map(lambda rel: counts[ent(rel).doc_id][ent(rel).value] if rel.feature_type == Features.InDifferentSentence else -1, rels)
 
 
 def crfq_left(rels):
     return calculate_entity_freq_in_doc_in_diff_sentence(rels, True)
+
 
 def crfq_right(rels):
     return calculate_entity_freq_in_doc_in_diff_sentence(rels, False)

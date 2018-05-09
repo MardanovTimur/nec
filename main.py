@@ -46,4 +46,5 @@ if __name__ == '__main__':
     corpus.fourth()
     logger.info('Fourth task finished')
 
-
+    if args.model_out_path:
+        corpus.pipeline.save(args.model_out_path)

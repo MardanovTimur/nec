@@ -12,6 +12,9 @@ class Corpus(DynamicFields):
     docs = []
     relations = []
 
+    a_paths = ()
+    d_paths = ()
+
     # Default properies
     text_encoding = "utf-8"
     word_type = WORD_TYPES[0]
@@ -84,7 +87,8 @@ class Corpus(DynamicFields):
 
         kf = KFold(n_splits=5)
         self.logger.info('CV start')
-        cv_results = cross_validate(PipeLine(self, True).pipeline, self.relations, train_y, cv=kf, scoring=scoring, verbose=1)
+        cv_results = cross_validate(PipeLine(self, True).pipeline, self.relations, train_y, cv=kf,
+                                    scoring=scoring, verbose=2, return_train_score=True)
         self.logger.info('CV end')
 
         print(cv_results)
@@ -92,28 +96,9 @@ class Corpus(DynamicFields):
         print('Train results: ')
         for metric in scoring:
             res = cv_results['train_'+metric]
-            print('%15s: %a; mean: %.2f; stdev: %.2f'.format(metric, res, res.mean(), res.std()))
+            print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
 
         print('Test results: ')
         for metric in scoring:
             res = cv_results['test_'+metric]
-            print('%15s: %a; mean: %.2f; stdev: %.2f'.format(metric, res, res.mean(), res.std()))
-
-    a_paths = ()
-
-    @property
-    def annotation_paths(self):
-        return self.a_paths
-
-    d_paths = ()
-
-    @property
-    def document_paths(self):
-        return self.d_paths
-
-    '''
-        Setter for in || out references
-    '''
-    def set_refs_in_out(self, ref_in, ref_out):
-        # TODO
-        pass
+            print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
