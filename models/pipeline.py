@@ -1,4 +1,7 @@
 #coding=utf-8
+from gensim.models import KeyedVectors
+from pymystem3 import Mystem
+
 __author__ = 'Timur Mardanov'
 
 import codecs
@@ -10,7 +13,7 @@ import numpy as np
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 
-from library.lib import SENTENCE_DIVIDERS
+from library.lib import SENTENCE_DIVIDERS, preprocess
 from models.reference import Features
 from stanfordcorenlp import StanfordCoreNLP
 
@@ -174,7 +177,6 @@ class PipeLine(object):
         print 'WCO, WDO calculation'
         self.matrixA = np.hstack(
             [self.matrix, np.array(calculate_whether_type_of_entity_is_unique_in_doc(self.app)).T])
-
 
     # D, не доделано
     def word_wectors(self):
@@ -357,31 +359,35 @@ def whether_type_is_unique_in_doc(type, doc):
                 return 0
     return 1
 
+
 #=============================================================================
 #                       3 task D realisation
 #=============================================================================
 
-#не доделано
 def calculate_word_vectors(app):
-    model = None
+    fname = 'vec_models/ruwikiruscorpora-nobigrams_upos_skipgram_300_5_2018.vec'
+    model = KeyedVectors.load_word2vec_format(fname,binary=False)
     wc_feature = []
     references = app.all_references
+    m = Mystem()
     for rel in references:
         words = rel.refAobj.value + " " + rel.refBobj.value
-        wc_feature.append(makeFeatureVec(words,model,VECTOR_SIZE))
+        words = preprocess(words,m)
+        tagged_words = pos_tag(tokens=words,tagset='universal',lang='rus')
+        wc_feature.append(makeFeatureVec(tagged_words,model,VECTOR_SIZE))
     return wc_feature
 
 
-def makeFeatureVec(words, model, num_features=VECTOR_SIZE):
+def makeFeatureVec(tagged_words, model, num_features=VECTOR_SIZE):
     featureVec = np.zeros((num_features,), dtype="float32")
     nwords = float(0)
-    index2word_set = set(model.wv.index2word)
-    for word in word_tokenize(words):
-        if word in index2word_set:
+    for word,pos in tagged_words:
+        if word+'_'+pos in model.vocab.keys():
             nwords = nwords + 1.
-            featureVec = np.add(featureVec, model.wv[word])
+            featureVec = np.add(featureVec, model[word+'_'+pos])
     featureVec = np.divide(featureVec, nwords)
     return featureVec
+
 
 
 

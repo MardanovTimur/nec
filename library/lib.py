@@ -1,6 +1,7 @@
 #coding=utf-8
 import argparse, os, sys, fnmatch, io, re, nltk.sem, logging
-from nltk import sent_tokenize, word_tokenize, pos_tag
+from nltk import sent_tokenize, word_tokenize, pos_tag, RegexpTokenizer
+from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from library.decorators import validate
 from nltk.tokenize import TweetTokenizer
@@ -164,6 +165,15 @@ def count_unique_entites_in_relations(documents):
             s.add(rel.refAobj.value)
             s.add(rel.refBobj.value)
     return len(s)
+
+def preprocess(text,m):
+    lemmatized_text = m.lemmatize(text)
+    text = ''.join(lemmatized_text).lower()
+    text = text.lower()
+    tokenizer = RegexpTokenizer(r'\w+')
+    tokens = tokenizer.tokenize(text)
+    filtered_words = [w for w in tokens if not w in stopwords.words('russian')]
+    return filtered_words
 
 @validate
 def statistic_of_corpus(app):
