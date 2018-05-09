@@ -20,3 +20,17 @@ def validate(function):
             logger.error('{}'.format(str(e)))
     return wrapper
 
+
+def log_time(func, cls_name=None):
+    logger = logging.getLogger('log_time')
+    name = func.__name__
+    if cls_name is not None:
+        name = '{}.{}'.format(cls_name, name)
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        logger.debug('{} start'.format(name))
+        r = func(*args, **kwargs)
+        logger.debug('{} end'.format(name))
+        return r
+    return wrapper

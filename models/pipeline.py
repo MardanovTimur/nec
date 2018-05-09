@@ -1,6 +1,10 @@
 #coding=utf-8
 import os
 
+from joblib import Memory
+
+from library.decorators import log_time
+
 __author__ = 'Timur Mardanov'
 
 import pickle
@@ -21,6 +25,13 @@ from stanfordcorenlp import StanfordCoreNLP
 
 VECTOR_SIZE = 300
 
+memory = Memory('./cache')
+
+
+@memory.cache(verbose=0)
+def pos_tag_cached(*args, **kwargs):
+    return pos_tag(*args, **kwargs)
+
 
 class CustomTfidfVectorizer(TfidfVectorizer):
 
@@ -35,12 +46,15 @@ class CustomTfidfVectorizer(TfidfVectorizer):
         else:
             return [rel.refBobj.value for rel in raw_documents]
 
+    @log_time(cls_name='Tfidf')
     def fit(self, raw_documents, y=None):
         return super(CustomTfidfVectorizer, self).fit(self._get_words(raw_documents), y)
 
+    @log_time(cls_name='Tfidf')
     def transform(self, raw_documents, copy=True):
         return super(CustomTfidfVectorizer, self).transform(self._get_words(raw_documents), copy)
 
+    @log_time(cls_name='Tfidf')
     def fit_transform(self, raw_documents, y=None):
         return super(CustomTfidfVectorizer, self).fit_transform(self._get_words(raw_documents), y)
 
@@ -54,8 +68,7 @@ class ColumnTransformer(BaseEstimator):
         return self
 
     def transform(self, relations, y=None):
-        res = self.mapper(relations, *self.mapper_args)
-        return np.array(res, ndmin=2).T
+        return np.array(self.mapper(relations, *self.mapper_args), ndmin=2).T
 
 
 class PipeLine(object):
@@ -94,7 +107,7 @@ class PipeLine(object):
             ]
 
         self.pipeline = Pipeline([
-            ('all_features', FeatureUnion(estimators, n_jobs=self.classifier_n_jobs)),
+            ('all_features', FeatureUnion(estimators)),
             ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
         ])
 
@@ -176,33 +189,37 @@ pos_ids = defaultdict(lambda: len(pos_ids.items()))
 
 
 # CPOS (pos_tag of first entity)
+@log_time
 def calculate_cpos_in_one_sentence(rels):
-    print('CPOS')
     tags = map(
-        lambda rel: pos_tag(word_tokenize(rel.refAobj.value), tagset='universal')[0][1]
+        lambda rel: pos_tag_cached(word_tokenize(rel.refAobj.value), tagset='universal')[0][1]
         if rel.feature_type == Features.InOneSentence else 'NO',
         rels)
     return map(lambda tag: pos_ids[tag], tags)
 
 
 # no verb between
+@log_time
 def calculate_wvnull_in_one_sentence(references):
     return map(lambda reference: \
-                   verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal'))) \
+                   verb_in_sentence(np.array(pos_tag_cached(reference.tokenized_text_between, tagset='universal'))) \
                        if reference.feature_type == Features.InOneSentence else -1, references)
 
 
 # only one verb
+@log_time
 def calculate_wvfl_in_one_sentence(references):
-    return map(lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
+    return map(lambda reference: verb_in_sentence(np.array(pos_tag_cached(reference.tokenized_text_between, tagset='universal')))\
                if reference.feature_type == Features.InOneSentence else -1,references)
 
 
+@log_time
 def calculate_wbnull_in_one_sentence(references):
     #INTBOOLLEN я вызываю тебя...........
     return map(lambda reference: int(bool(len(reference.text_between))) if reference.feature_type == Features.InOneSentence else -1,references)
 
 
+@log_time
 def calculate_wbfl_in_one_sentence(references):
     return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
 
@@ -235,6 +252,7 @@ def get_index_from_list(tokenized_text, ent,):
 
 
 def calculate_dpr2c_in_one_sentence(references, dependency_core):
+    print('DPR2C')
     for reference in references:
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
@@ -248,6 +266,7 @@ def calculate_dpr2c_in_one_sentence(references, dependency_core):
 
 
 def calculate_dpr2d_in_one_sentence(references, dependency_core):
+    print('DPR2D')
     for reference in references:
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
