@@ -34,6 +34,11 @@ class Relation(DynamicFields):
     # Not fictive
     is_fictive = False
 
+
+    # (str) If features in one sentence
+    # requires for task3 (b)
+    text = ""
+
     def __eq__(self, o):
         return self.refAobj.type+self.refBobj.type == o.refAobj.type+o.refBobj.type
 

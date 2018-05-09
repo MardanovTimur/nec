@@ -1,4 +1,8 @@
 #coding=utf-8
+import os
+
+__author__ = 'Timur Mardanov'
+
 import pickle
 from collections import defaultdict
 
@@ -12,8 +16,10 @@ from sklearn.pipeline import FeatureUnion, Pipeline
 
 from library.lib import SENTENCE_DIVIDERS
 from models.relation import Features
+from stanfordcorenlp import StanfordCoreNLP
 
-__author__ = 'Timur Mardanov'
+
+VECTOR_SIZE = 300
 
 
 class CustomTfidfVectorizer(TfidfVectorizer):
@@ -95,7 +101,7 @@ class PipeLine(object):
         return CustomTfidfVectorizer(
             left=left,
             encoding=app.text_encoding,
-            ngram_range=(app.n, ) * 2,
+            ngram_range=(app.n,) * 2,
             max_df=app.unknown_word_freq or 1.0,
             max_features=2 * len(app.relations),
             smooth_idf=app.laplace,
@@ -107,9 +113,60 @@ class PipeLine(object):
         '''
         self.pipeline.fit(relations, types)
 
+    def init_stanford_dependency_searching(self, ):
+        self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(self.app.BASE_PATH, 'stanford_nlp')))
+
     def test(self, test_relations):
         return self.pipeline.predict(test_relations)
 
+    #------------------------------------------------------------------------
+    #                      3task B
+    #------------------------------------------------------------------------
+
+    #B1
+    def ref_in_one_dpr2c(self):
+        #DPR2C
+        print '\nDPR2C calculation'
+        cpos = np.array([calculate_dpr2c_in_one_sentence(self.app, self.dependency_core)])
+        self.matrix = np.append(self.matrix, cpos.T, axis=1)
+
+    #B2
+    def ref_in_one_dpr2d(self):
+        #DPR2D
+        print 'DPR2D calculation'
+        self.matrix = np.append(self.matrix, np.array([calculate_dpr2d_in_one_sentence(self.app, self.dependency_core)]).T, axis=1)
+
+    #B3
+    def ref_in_one_wcdd(self):
+        #WCDD
+        print 'WCDD calculation'
+        self.matrix = np.hstack([self.matrix, np.array([calculate_wcdd_in_one_sentence(self.app, self.dependency_core)]).T])
+
+    #B4
+    def ref_in_one_wrcd(self):
+        #WRCD
+        print 'WRCD calculation'
+        self.matrix = np.hstack([self.matrix, np.array([calculate_wrcd_in_one_sentence(self.app, self.dependency_core)]).T])
+
+    #B5
+    def ref_in_one_wrdd(self):
+        #WRDD
+        print 'WRDD calculation'
+        self.matrix = np.hstack([self.matrix, np.array([calculate_wrdd_in_one_sentence(self.app, self.dependency_core)]).T])
+
+    # C4 , C5
+    def whether_type_of_entity_is_unique_in_doc(self):
+        # WCO, WDO
+        print 'WCO, WDO calculation'
+        self.matrixA = np.hstack(
+            [self.matrix, np.array(calculate_whether_type_of_entity_is_unique_in_doc(self.app)).T])
+
+
+    # D, не доделано
+    def word_wectors(self):
+        # WV
+        print 'Word vectors calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_word_vectors(self.app))])
 
 #=============================================================================
 #                       3 task A realisation
@@ -119,17 +176,18 @@ def verb_in_sentence(tagged):
     if len(tagged) == 0:
         return 0
     else:
-        return int(u'VERB' in tagged[:,1])
+        return int(u'VERB' in tagged[:, 1])
 
 
 def only_one_verb_in_sentence(tagged):
     if len(tagged) == 0:
         return 0
     else:
-        return int(sum(map(lambda tag: u'VERB' == tag, tagged[:,1]))==1)
+        return int(sum(map(lambda tag: u'VERB' == tag, tagged[:, 1])) == 1)
 
 
 pos_ids = defaultdict(lambda: len(pos_ids.items()))
+
 
 # CPOS (pos_tag of first entity)
 def calculate_cpos_in_one_sentence(rels):
@@ -139,11 +197,13 @@ def calculate_cpos_in_one_sentence(rels):
         rels)
     return map(lambda tag: pos_ids[tag], tags)
 
+
 # no verb between
 def calculate_wvnull_in_one_sentence(references):
     return map(lambda reference: \
-               verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
-                    if reference.feature_type == Features.InOneSentence else -1, references)
+                   verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal'))) \
+                       if reference.feature_type == Features.InOneSentence else -1, references)
+
 
 # only one verb
 def calculate_wvfl_in_one_sentence(references):
@@ -160,7 +220,59 @@ def calculate_wbfl_in_one_sentence(references):
     return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
 
 #=============================================================================
-#                       3 task B realisation( осторожно. снизу кривой код)
+#                       3 task B realisation
+#=============================================================================
+
+def build_path_from_root(elements, destination_index, path=[], current_ind = 0, previos_indexes = []):
+    '''
+        Get path from root to element
+    '''
+    path.append(elements[current_ind][0])
+    previos_indexes.append(current_ind)
+    if (current_ind == destination_index):
+        return path
+    if elements[current_ind][1] not in previos_indexes:
+        if len(elements) != elements[current_ind][1]:
+            return build_path_from_root(elements, destination_index, path, elements[current_ind][1] , previos_indexes)
+    if elements[current_ind][2] not in previos_indexes:
+        if len(elements) != elements[current_ind][2]:
+            return build_path_from_root(elements, destination_index, path, elements[current_ind][2], previos_indexes)
+
+def get_index_from_list(tokenized_text, ent,):
+    for item, index in zip(tokenized_text, range(len(tokenized_text))):
+        if item == ent.value:
+            return index
+    return 0
+
+def calculate_dpr2c_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    for reference in references:
+        tokenized_text = dependency_core.word_tokenize(reference.text)
+        tree = dependency_core.dependency_parse(reference.text)
+        index = get_index_from_list(tokenized_text, reference.refAobj)
+        path = build_path_from_root(tree, index)
+        if not path:
+            reference.path = 'None'
+        else:
+            reference.path = reduce(lambda x,y: x+'/'+y,path)
+    return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
+
+def calculate_dpr2d_in_one_sentence(app, dependency_core):
+    references = app.all_references
+    for reference in references:
+        tokenized_text = dependency_core.word_tokenize(reference.text)
+        tree = dependency_core.dependency_parse(reference.text)
+        index = get_index_from_list(tokenized_text, reference.refBobj)
+        path = build_path_from_root(tree, index-1)
+        if not path:
+            reference.path = 'None'
+        else:
+            reference.path = reduce(lambda x,y: x+'/'+y,path)
+    return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
+
+
+#=============================================================================
+#                       3 task C realisation
 #=============================================================================
 
 def calculate_sdist_in_diff_sentence(references):
@@ -170,7 +282,7 @@ def calculate_sdist_in_diff_sentence(references):
         if rel.feature_type == Features.InDifferentSentence:
             count_sentence_dividers = 0
             for divider in SENTENCE_DIVIDERS:
-                count_sentence_dividers += rel.text_between.count(divider)-1
+                count_sentence_dividers += rel.text_between.count(divider) - 1
             sdist_feature.append(count_sentence_dividers)
         else:
             sdist_feature.append(-1)
@@ -188,6 +300,60 @@ def calculate_entity_freq_in_doc_in_diff_sentence(rels, left=True):
         counts[ent(rel).doc_id][ent(rel).value] += 1
     return map(lambda rel: counts[ent(rel).doc_id][ent(rel).value] if rel.feature_type == Features.InDifferentSentence else -1, rels)
 
+#for C4, C5
+def calculate_whether_type_of_entity_is_unique_in_doc(app):
+    # column of matrix with WOC feature
+    woc_feature_left = []
+    woc_feature_right = []
+    # TODO
+    for doc in app.documents:
+        for rel in doc.references:
+            if rel.feature_type == Features.InDifferentSentence:
+                woc_feature_left.append(whether_type_is_unique_in_doc(rel.refAobj.type,doc))
+                woc_feature_right.append(whether_type_is_unique_in_doc(rel.refBobj.type, doc))
+            else:
+                woc_feature_left.append(-1)
+                woc_feature_right.append(-1)
+    woc_feature_left_right = [woc_feature_left,woc_feature_right]
+    return woc_feature_left_right
+
+
+def whether_type_is_unique_in_doc(type, doc):
+    type_counts = 0
+    for rel in doc.references:
+        types = map(lambda ent: ent.type, (rel.refAobj, rel.refBobj))
+        if type in types:
+            type_counts += 1
+            if type_counts >= 2:
+                return 0
+    return 1
+
+
+#=============================================================================
+#                       3 task D realisation
+#=============================================================================
+
+#не доделано
+def calculate_word_vectors(app):
+    model = None
+    wc_feature = []
+    references = app.all_references
+    for rel in references:
+        words = rel.refAobj.value + " " + rel.refBobj.value
+        wc_feature.append(makeFeatureVec(words,model,VECTOR_SIZE))
+    return wc_feature
+
+
+def makeFeatureVec(words, model, num_features=VECTOR_SIZE):
+    featureVec = np.zeros((num_features,), dtype="float32")
+    nwords = float(0)
+    index2word_set = set(model.wv.index2word)
+    for word in word_tokenize(words):
+        if word in index2word_set:
+            nwords = nwords + 1.
+            featureVec = np.add(featureVec, model.wv[word])
+    featureVec = np.divide(featureVec, nwords)
+    return featureVec
 
 def crfq_left(rels):
     return calculate_entity_freq_in_doc_in_diff_sentence(rels, True)
