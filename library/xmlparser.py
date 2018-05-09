@@ -2,7 +2,7 @@ from xml.etree import ElementTree as ET
 
 from nltk import word_tokenize
 
-from library.annotations import read_doc
+from library.annotations import read_doc, get_sentence_in_entities
 from models.entity import Entity
 from models.relation import Relation
 
@@ -68,6 +68,8 @@ def parse_xml(file_path, encoding):
                 entities.reverse()
             ent1, ent2 = entities
 
+            _sentence_ = get_sentence_in_entities(text, ent1, ent2)
+
             kwargs_for_relation = {
                 'id': int(entity.attrib['id']),
                 'type': xml_fields_obj.type,
@@ -75,6 +77,7 @@ def parse_xml(file_path, encoding):
                 'refB' : xml_fields_obj.ref_id[1],
                 'refAobj': ent1,
                 'refBobj': ent2,
+                'text': _sentence_,
                 'text_between': text[ent1.index_b: ent2.index_a],
                 'tokenized_text_between': word_tokenize(text[ent1.index_b: ent2.index_a]),
             }

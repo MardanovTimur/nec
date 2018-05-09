@@ -47,7 +47,7 @@ def parse_dataset(basename, with_y=False):
         doc = Document(**line_to_dict(l, abstract_fields))
         doc.entities = doc_entities[doc.id]
         doc.relations = doc_relations[doc.id]
-        doc.relations += get_fictive_relations(doc.entities, doc.relations)
+        doc.relations += get_fictive_relations(doc)
         yield doc
 
 

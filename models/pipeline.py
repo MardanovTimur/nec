@@ -46,14 +46,19 @@ class CustomTfidfVectorizer(TfidfVectorizer):
 
 
 class ColumnTransformer(BaseEstimator):
-    def __init__(self, mapper):
+    def __init__(self, mapper, mapper_args=None):
         self.mapper = mapper
+        self.mapper_args = mapper_args
 
     def fit(self, *args):
         return self
 
     def transform(self, relations, y=None):
-        return np.array([self.mapper(relations)]).T
+        res = self.mapper(relations, *self.mapper_args)
+        if type(res[0]) != 'list':
+            # If one column, wrap in array for np
+            res = [res]
+        return np.array(res).T
 
 
 class PipeLine(object):
@@ -80,7 +85,10 @@ class PipeLine(object):
                 ('wbfl', ColumnTransformer(calculate_wbfl_in_one_sentence)),
                 ('sdist', ColumnTransformer(calculate_sdist_in_diff_sentence)),
                 ('crfq', ColumnTransformer(crfq_left)),
-                ('drfq', ColumnTransformer(crfq_right))
+                ('drfq', ColumnTransformer(crfq_right)),
+                ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
+                ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
+                ('wco_wdo', ColumnTransformer(calculate_whether_type_of_entity_is_unique_in_doc))
             ]
 
         self.pipeline = Pipeline([
@@ -122,19 +130,6 @@ class PipeLine(object):
     #------------------------------------------------------------------------
     #                      3task B
     #------------------------------------------------------------------------
-
-    #B1
-    def ref_in_one_dpr2c(self):
-        #DPR2C
-        print '\nDPR2C calculation'
-        cpos = np.array([calculate_dpr2c_in_one_sentence(self.app, self.dependency_core)])
-        self.matrix = np.append(self.matrix, cpos.T, axis=1)
-
-    #B2
-    def ref_in_one_dpr2d(self):
-        #DPR2D
-        print 'DPR2D calculation'
-        self.matrix = np.append(self.matrix, np.array([calculate_dpr2d_in_one_sentence(self.app, self.dependency_core)]).T, axis=1)
 
     #B3
     def ref_in_one_wcdd(self):
@@ -223,6 +218,7 @@ def calculate_wbfl_in_one_sentence(references):
 #                       3 task B realisation
 #=============================================================================
 
+
 def build_path_from_root(elements, destination_index, path=[], current_ind = 0, previos_indexes = []):
     '''
         Get path from root to element
@@ -238,14 +234,15 @@ def build_path_from_root(elements, destination_index, path=[], current_ind = 0, 
         if len(elements) != elements[current_ind][2]:
             return build_path_from_root(elements, destination_index, path, elements[current_ind][2], previos_indexes)
 
+
 def get_index_from_list(tokenized_text, ent,):
     for item, index in zip(tokenized_text, range(len(tokenized_text))):
         if item == ent.value:
             return index
     return 0
 
-def calculate_dpr2c_in_one_sentence(app, dependency_core):
-    references = app.all_references
+
+def calculate_dpr2c_in_one_sentence(references, dependency_core):
     for reference in references:
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
@@ -257,8 +254,8 @@ def calculate_dpr2c_in_one_sentence(app, dependency_core):
             reference.path = reduce(lambda x,y: x+'/'+y,path)
     return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
 
-def calculate_dpr2d_in_one_sentence(app, dependency_core):
-    references = app.all_references
+
+def calculate_dpr2d_in_one_sentence(references, dependency_core):
     for reference in references:
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
@@ -301,32 +298,26 @@ def calculate_entity_freq_in_doc_in_diff_sentence(rels, left=True):
     return map(lambda rel: counts[ent(rel).doc_id][ent(rel).value] if rel.feature_type == Features.InDifferentSentence else -1, rels)
 
 #for C4, C5
-def calculate_whether_type_of_entity_is_unique_in_doc(app):
+def calculate_whether_type_of_entity_is_unique_in_doc(rels):
     # column of matrix with WOC feature
     woc_feature_left = []
     woc_feature_right = []
-    # TODO
-    for doc in app.documents:
-        for rel in doc.references:
-            if rel.feature_type == Features.InDifferentSentence:
-                woc_feature_left.append(whether_type_is_unique_in_doc(rel.refAobj.type,doc))
-                woc_feature_right.append(whether_type_is_unique_in_doc(rel.refBobj.type, doc))
-            else:
-                woc_feature_left.append(-1)
-                woc_feature_right.append(-1)
+    counts_left = defaultdict(lambda: 0)
+    counts_right = defaultdict(lambda: 0)
+    for rel in rels:
+        counts_left[rel.refAobj.type] += 1
+        counts_right[rel.refBobj.type] += 1
+
+    for rel in rels:
+        if rel.feature_type == Features.InDifferentSentence:
+            woc_feature_left.append(int(counts_left[rel.refAobj.type] < 2))
+            woc_feature_right.append(int(counts_right[rel.refBobj.type] < 2))
+        else:
+            woc_feature_left.append(-1)
+            woc_feature_right.append(-1)
+
     woc_feature_left_right = [woc_feature_left,woc_feature_right]
     return woc_feature_left_right
-
-
-def whether_type_is_unique_in_doc(type, doc):
-    type_counts = 0
-    for rel in doc.references:
-        types = map(lambda ent: ent.type, (rel.refAobj, rel.refBobj))
-        if type in types:
-            type_counts += 1
-            if type_counts >= 2:
-                return 0
-    return 1
 
 
 #=============================================================================
@@ -334,10 +325,9 @@ def whether_type_is_unique_in_doc(type, doc):
 #=============================================================================
 
 #не доделано
-def calculate_word_vectors(app):
+def calculate_word_vectors(references):
     model = None
     wc_feature = []
-    references = app.all_references
     for rel in references:
         words = rel.refAobj.value + " " + rel.refBobj.value
         wc_feature.append(makeFeatureVec(words,model,VECTOR_SIZE))

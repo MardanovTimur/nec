@@ -15,11 +15,13 @@ class MadeCorpus(Corpus):
             e_list, r_list = parse_xml(path, self.text_encoding)
             kwargs_for_doc = {
                 'entities': e_list,
-                'relations': r_list + get_fictive_relations(e_list, r_list),
+                'relations': r_list,
                 'annotation_path': path,
                 'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
             }
-            docs.append(Document(**kwargs_for_doc))
+            doc = Document(**kwargs_for_doc)
+            doc.relations += get_fictive_relations(doc)
+            docs.append(doc)
             if len(docs) >= self.train_size:
                 break
         return docs
