@@ -84,7 +84,9 @@ class App(DynamicFields):
             self.pipeline.dependency_core.close()
 
     def relation_in_different_sentence(self, ):
-        pass
+        self.pipeline.ref_in_diff_sdist()
+        self.pipeline.entity_freq_in_doc()
+        self.pipeline.whether_type_of_entity_is_unique_in_doc()
 
 
     def __getattr__(self, attr):
