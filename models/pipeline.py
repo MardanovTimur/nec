@@ -207,7 +207,7 @@ def only_one_verb_in_sentence(tagged):
 # CPOS (pos_tag of first entity)
 def calculate_cpos_in_one_sentence(app):
     references = app.all_references
-    return map(lambda reference: pos_tag(word_tokenize(reference.refAobj.value),
+    return map(lambda reference: pos_tag(word_tokenize(reference.refAobj.value), lang=app.language,
                          tagset='universal')[0][1] if reference.feature_type == Features.InOneSentence else 'NO',references)
 
 
@@ -215,7 +215,7 @@ def calculate_cpos_in_one_sentence(app):
 def calculate_wvnull_in_one_sentence(app):
     references = app.all_references
     return map(lambda reference: \
-                   verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal'))) \
+                   verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, lang=app.language,tagset='universal'))) \
                        if reference.feature_type == Features.InOneSentence else -1, references)
 
 
@@ -223,7 +223,7 @@ def calculate_wvnull_in_one_sentence(app):
 def calculate_wvfl_in_one_sentence(app):
     references = app.all_references
     return map(
-        lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal'))) \
+        lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, lang=app.language,tagset='universal'))) \
             if reference.feature_type == Features.InOneSentence else -1, references)
 
 

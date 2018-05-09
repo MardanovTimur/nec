@@ -115,6 +115,8 @@ def parse_args():
     '''
     RPARSER.add_argument('--train-size', help=u'Количество документов из src-train-texts',type=int,
                          default=999999999, required=False, nargs='?')
+    RPARSER.add_argument('--language', default='eng', help='Language of dataset', choices=('rus','eng'),required=True,
+                         nargs='?' )
     '''
         F2 and F3
     '''

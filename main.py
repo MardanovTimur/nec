@@ -74,14 +74,15 @@ class App(DynamicFields):
         self.pipeline.ref_in_one_wbfl()
 
         #B
-        self.pipeline.init_stanford_dependency_searching()
-        try:
-            self.pipeline.ref_in_one_dpr2c()
-            self.pipeline.ref_in_one_dpr2d()
-        except Exception as e:
-            print(e)
-        finally:
-            self.pipeline.dependency_core.close()
+        if self.language != 'rus':
+            self.pipeline.init_stanford_dependency_searching()
+            try:
+                self.pipeline.ref_in_one_dpr2c()
+                self.pipeline.ref_in_one_dpr2d()
+            except Exception as e:
+                print(e)
+            finally:
+                self.pipeline.dependency_core.close()
 
     def relation_in_different_sentence(self, ):
         self.pipeline.ref_in_diff_sdist()
