@@ -46,15 +46,12 @@ class CustomTfidfVectorizer(TfidfVectorizer):
         else:
             return [rel.refBobj.value for rel in raw_documents]
 
-    @log_time(cls_name='Tfidf')
     def fit(self, raw_documents, y=None):
         return super(CustomTfidfVectorizer, self).fit(self._get_words(raw_documents), y)
 
-    @log_time(cls_name='Tfidf')
     def transform(self, raw_documents, copy=True):
         return super(CustomTfidfVectorizer, self).transform(self._get_words(raw_documents), copy)
 
-    @log_time(cls_name='Tfidf')
     def fit_transform(self, raw_documents, y=None):
         return super(CustomTfidfVectorizer, self).fit_transform(self._get_words(raw_documents), y)
 
@@ -75,19 +72,34 @@ class PipeLine(object):
     classifier_n_jobs = 4
     classifier_solver = 'lbfgs'
 
+    dependency_core = None
+
     def __init__(self, app, advanced_features=True):
         '''
             Init pipeline
         '''
-        estimators = [
-            ('left_vec', self.get_vectorizer(app, True)),
-            ('right_vec', self.get_vectorizer(app, False)),
-        ]
+        estimators = self.get_baseline_features(app)
 
         if advanced_features:
-            self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(PROJECT_PATH, 'stanford_nlp')))
+            if self.dependency_core is None:
+                self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(PROJECT_PATH, 'stanford_nlp')))
+            estimators += self.get_advanced_features()
 
-            estimators += [
+        self.pipeline = Pipeline([
+            ('all_features', FeatureUnion(estimators)),
+            ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
+        ], memory='./cache')
+
+    @staticmethod
+    def get_baseline_features(app):
+        return [
+            ('left_vec', PipeLine.get_vectorizer(app, True)),
+            ('right_vec', PipeLine.get_vectorizer(app, False)),
+        ]
+
+    @staticmethod
+    def get_advanced_features():
+        return [
                 # one sentence
                 ('cpos', ColumnTransformer(calculate_cpos_in_one_sentence)),
                 ('wvnull', ColumnTransformer(calculate_wvnull_in_one_sentence)),
@@ -106,10 +118,15 @@ class PipeLine(object):
                 ('wco_wdo', ColumnTransformer(calculate_whether_type_of_entity_is_unique_in_doc))
             ]
 
-        self.pipeline = Pipeline([
-            ('all_features', FeatureUnion(estimators)),
-            ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
-        ])
+    def generate_feature_variants(self, app):
+        base = self.get_baseline_features(app)
+        advanced = self.get_advanced_features()
+        for feature in advanced:
+            pipeline = Pipeline([
+                ('all_features', FeatureUnion(base + [feature])),
+                ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
+            ], memory='./cache')
+            yield feature[0], pipeline
 
     def save(self, path):
         pickle.dump(self.pipeline, open(path, 'wb'))
@@ -117,7 +134,8 @@ class PipeLine(object):
     def load(self, path):
         self.pipeline = pickle.load(open(path, 'rb'))
 
-    def get_vectorizer(self, app, left):
+    @staticmethod
+    def get_vectorizer(app, left):
         '''
             Get TfidfVectorizer instance
         '''

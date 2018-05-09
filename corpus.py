@@ -88,18 +88,24 @@ class Corpus(DynamicFields):
 
         kf = KFold(n_splits=5)
         self.logger.info('CV start')
-        cv_results = cross_validate(PipeLine(self, True).pipeline, self.relations, train_y, cv=kf,
-                                    scoring=scoring, verbose=2, return_train_score=True)
+
+        pipeline0 = PipeLine(self, False)
+
+        for fname, pipeline in pipeline0.generate_feature_variants(self):
+            logging.info('Testing {}'.format(fname))
+            cv_results = cross_validate(pipeline, self.relations, train_y, cv=kf,
+                                        scoring=scoring, verbose=2, return_train_score=True)
+            print(cv_results)
+
+            print('Train results: ')
+            for metric in scoring:
+                res = cv_results['train_' + metric]
+                print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
+
+            print('Test results: ')
+            for metric in scoring:
+                res = cv_results['test_' + metric]
+                print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
+
         self.logger.info('CV end')
 
-        print(cv_results)
-
-        print('Train results: ')
-        for metric in scoring:
-            res = cv_results['train_'+metric]
-            print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
-
-        print('Test results: ')
-        for metric in scoring:
-            res = cv_results['test_'+metric]
-            print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
