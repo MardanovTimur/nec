@@ -243,38 +243,53 @@ def calculate_wbfl_in_one_sentence(app):
 #                       3 task B realisation
 #=============================================================================
 
-def build_tree(elements, ):
-    pass
+def build_path_from_root(elements, destination_index, path=[], current_ind = 0, previos_indexes = []):
+    '''
+        Get path from root to element
+    '''
+    path.append(elements[current_ind][0])
+    previos_indexes.append(current_ind)
+    if (current_ind == destination_index):
+        return path
+    if elements[current_ind][1] not in previos_indexes:
+        if len(elements) != elements[current_ind][1]:
+            return build_path_from_root(elements, destination_index, path, elements[current_ind][1] , previos_indexes)
+    if elements[current_ind][2] not in previos_indexes:
+        if len(elements) != elements[current_ind][2]:
+            return build_path_from_root(elements, destination_index, path, elements[current_ind][2], previos_indexes)
+
+def get_index_from_list(tokenized_text, ent,):
+    for item, index in zip(tokenized_text, range(len(tokenized_text))):
+        if item == ent.value:
+            return index
+    return 0
 
 def calculate_dpr2c_in_one_sentence(app, dependency_core):
     references = app.all_references
     for reference in references:
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
-        print len(tree)
-        root_index = tree[0][2]
-        print tree
-    return map(lambda reference: pos_tag(word_tokenize(reference.refAobj.value),
-                         tagset='universal')[0][1] if reference.feature_type == Features.InOneSentence else 'NO',references)
+        index = get_index_from_list(tokenized_text, reference.refAobj)
+        path = build_path_from_root(tree, index)
+        if not path:
+            reference.path = 'None'
+        else:
+            reference.path = reduce(lambda x,y: x+'/'+y,path)
+    return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
 
 def calculate_dpr2d_in_one_sentence(app, dependency_core):
     references = app.all_references
-    return map(lambda reference: \
-               verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
-                    if reference.feature_type == Features.InOneSentence else -1, references)
+    for reference in references:
+        tokenized_text = dependency_core.word_tokenize(reference.text)
+        tree = dependency_core.dependency_parse(reference.text)
+        index = get_index_from_list(tokenized_text, reference.refBobj)
+        path = build_path_from_root(tree, index-1)
+        if not path:
+            reference.path = 'None'
+        else:
+            reference.path = reduce(lambda x,y: x+'/'+y,path)
+    return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
 
-def calculate_wcdd_in_one_sentence(app, dependency_core):
-    references = app.all_references
-    return map(lambda reference: verb_in_sentence(np.array(pos_tag(reference.tokenized_text_between, tagset='universal')))\
-               if reference.feature_type == Features.InOneSentence else -1,references)
-
-def calculate_wrcd_in_one_sentence(app, dependency_core):
-    references = app.all_references
-    return map(lambda reference: int(bool(len(reference.text_between))) if reference.feature_type == Features.InOneSentence else -1,references)
-
-def calculate_wrdd_in_one_sentence(app, dependency_core):
-    references = app.all_references
-    return map(lambda reference: int(len(reference.tokenized_text_between) == 1) if reference.feature_type == Features.InOneSentence else -1,references)
 
 #=============================================================================
 #                       3 task C realisation
