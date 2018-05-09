@@ -66,18 +66,27 @@ class App(DynamicFields):
                 WBFL(when only one word in between),
             ]
         '''
-        #  self.pipeline.ref_in_one_cpos()
-        #  self.pipeline.ref_in_one_wvnull()
-        #  self.pipeline.ref_in_one_wvfl()
-        #  self.pipeline.ref_in_one_wbnull()
-        #  self.pipeline.ref_in_one_wbfl()
+        #A
+        self.pipeline.ref_in_one_cpos()
+        self.pipeline.ref_in_one_wvnull()
+        self.pipeline.ref_in_one_wvfl()
+        self.pipeline.ref_in_one_wbnull()
+        self.pipeline.ref_in_one_wbfl()
+
+        #B
         self.pipeline.init_stanford_dependency_searching()
         try:
             self.pipeline.ref_in_one_dpr2c()
+            self.pipeline.ref_in_one_dpr2d()
         except Exception as e:
-            print(e.message)
+            print(e)
         finally:
             self.pipeline.dependency_core.close()
+
+    def relation_in_different_sentence(self, ):
+        self.pipeline.ref_in_diff_sdist()
+        self.pipeline.entity_freq_in_doc()
+        self.pipeline.whether_type_of_entity_is_unique_in_doc()
 
 
     def __getattr__(self, attr):
@@ -132,7 +141,10 @@ if __name__ == '__main__':
     logger.info("Third task started : Add extra features for data")
     #---------------------------A-------------------------------------------
     logger.info("Third task started : Extra features for relation in one sentence")
+    #AB
     app.third().relation_in_one_sentence()
+    #CD
+    app.third().relation_in_different_sentence()
     #-----------------------------------------------------------------------
 
 

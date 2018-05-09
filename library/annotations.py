@@ -151,6 +151,9 @@ def parse_brat(file_path, encoding):
 
 
 def get_fictive_relations(entities, relations, text_path, encoding):
+    '''
+        Build fictive rels
+    '''
     fictive_relations = []
     # SET IDS of entities, which now in relations
     persistent_ids = map(lambda rel: (rel.refAobj.id, rel.refBobj.id), relations)
@@ -160,13 +163,17 @@ def get_fictive_relations(entities, relations, text_path, encoding):
     for i in range(len(entities)-1):
         for j in range(i+1, len(entities)):
             ent1, ent2 = (entities[i], entities[j])
-            _sentence_1 = get_sentence_in_entities(text,ent1, ent2,)
-            rel1 = Reference(**{'refAobj': ent1, 'refBobj': ent2, 'is_fictive': True, 'text': _sentence_1})
-            _sentence_2 = get_sentence_in_entities(text,ent2, ent1,)
-            rel2 = Reference(**{'refAobj': ent2, 'refBobj': ent1, 'is_fictive': True, 'text': _sentence_2})
+            rel1 = Reference(**{'refAobj': ent1, 'refBobj': ent2, 'is_fictive': True,
+                    'text_between': text[ent1.index_b: ent2.index_a],
+                    })
+            rel2 = Reference(**{'refAobj': ent2, 'refBobj': ent1, 'is_fictive': True,
+                                'text_between': text[ent1.index_b: ent2.index_a],
+                                })
             filtered_rels = filter(lambda r: r in relation_set_by_entity_types,(rel1, rel2))
             for rel in filtered_rels:
                 if (rel.refAobj.id, rel.refBobj.id) not in persistent_ids:
+                    rel.text = get_sentence_in_entities(text,rel.refAobj, rel.refBobj,)
+                    rel.tokenized_text_between = word_tokenize(rel.text_between)
                     fictive_relations.append(rel)
     return fictive_relations
 
