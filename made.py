@@ -18,7 +18,6 @@ class MadeCorpus(Corpus):
                 'relations': r_list,
                 'annotation_path': path,
                 'text': text,
-                'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
             }
             doc = Document(**kwargs_for_doc)
             doc.relations += get_fictive_relations(doc)

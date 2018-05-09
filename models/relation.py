@@ -24,9 +24,6 @@ class Relation(DynamicFields):
     refAobj = None
     refBobj = None
 
-    refAtext = None
-    refBtext = None
-
     # Text between entities
     text_between = ""
     tokenized_text_between = ()

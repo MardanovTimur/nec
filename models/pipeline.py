@@ -77,7 +77,7 @@ class PipeLine(object):
     classifier_n_jobs = 4
     classifier_solver = 'lbfgs'
 
-    dependency_core = None
+    _dependency_core = None
 
     def __init__(self, app, advanced_features=True):
         '''
@@ -86,29 +86,28 @@ class PipeLine(object):
         estimators = self.get_baseline_features(app)
 
         if advanced_features:
-            if self.dependency_core is None:
-                self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(PROJECT_PATH, 'stanford_nlp')))
-            estimators += self.get_advanced_features()
+            add = self.get_advanced_features(app)
+            if type(advanced_features) == list:
+                add = filter(lambda t: t[0] in advanced_features, add)
+            estimators += add
 
         self.pipeline = Pipeline([
             ('all_features', FeatureUnion(estimators)),
             ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
         ], memory='./cache')
 
-    @staticmethod
-    def get_baseline_features(app):
+    def get_baseline_features(self, app):
         return [
             ('left_vec', PipeLine.get_vectorizer(app, True)),
             ('right_vec', PipeLine.get_vectorizer(app, False)),
         ]
 
-    @staticmethod
-    def get_advanced_features():
+    def get_advanced_features(self, app):
         return [
                 # one sentence
-                ('cpos', ColumnTransformer(calculate_cpos_in_one_sentence)),
-                ('wvnull', ColumnTransformer(calculate_wvnull_in_one_sentence)),
-                ('wvfl', ColumnTransformer(calculate_wvfl_in_one_sentence)),
+                ('cpos', ColumnTransformer(calculate_cpos_in_one_sentence, [app.language])),
+                ('wvnull', ColumnTransformer(calculate_wvnull_in_one_sentence, [app.language])),
+                ('wvfl', ColumnTransformer(calculate_wvfl_in_one_sentence, [app.language])),
                 ('wbnull', ColumnTransformer(calculate_wbnull_in_one_sentence)),
                 ('wbfl', ColumnTransformer(calculate_wbfl_in_one_sentence)),
 
@@ -116,28 +115,27 @@ class PipeLine(object):
                 ('sdist', ColumnTransformer(calculate_sdist_in_diff_sentence)),
                 ('crfq', ColumnTransformer(crfq_left)),
                 ('drfq', ColumnTransformer(crfq_right)),
-                # ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
-                # ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
 
                 # C4, C5
-                ('wco_wdo', ColumnTransformer(calculate_whether_type_of_entity_is_unique_in_doc))
-            ]
-
-    def generate_feature_variants(self, app):
-        base = self.get_baseline_features(app)
-        advanced = self.get_advanced_features()
-        for feature in advanced:
-            pipeline = Pipeline([
-                ('all_features', FeatureUnion(base + [feature])),
-                ('clf', LogisticRegression(n_jobs=self.classifier_n_jobs, solver=self.classifier_solver, verbose=1))
-            ], memory='./cache')
-            yield feature[0], pipeline
+                ('wco_wdo', ColumnTransformer(calculate_whether_type_of_entity_is_unique_in_doc)),
+            ] + ([
+                ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
+                ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
+            ] if app.language != 'rus' else [
+                ('wordvec', ColumnTransformer(calculate_word_vectors)),
+            ])
 
     def save(self, path):
         pickle.dump(self.pipeline, open(path, 'wb'))
 
     def load(self, path):
         self.pipeline = pickle.load(open(path, 'rb'))
+
+    @property
+    def dependency_core(self):
+        if not self._dependency_core:
+            self._dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(PROJECT_PATH, 'stanford_nlp')))
+        return self._dependency_core
 
     @staticmethod
     def get_vectorizer(app, left):
@@ -162,33 +160,6 @@ class PipeLine(object):
     def test(self, test_relations):
         return self.pipeline.predict(test_relations)
 
-    #------------------------------------------------------------------------
-    #                      3task B
-    #------------------------------------------------------------------------
-
-    #B3
-    def ref_in_one_wcdd(self):
-        #WCDD
-        print 'WCDD calculation'
-        self.matrix = np.hstack([self.matrix, np.array([calculate_wcdd_in_one_sentence(self.app, self.dependency_core)]).T])
-
-    #B4
-    def ref_in_one_wrcd(self):
-        #WRCD
-        print 'WRCD calculation'
-        self.matrix = np.hstack([self.matrix, np.array([calculate_wrcd_in_one_sentence(self.app, self.dependency_core)]).T])
-
-    #B5
-    def ref_in_one_wrdd(self):
-        #WRDD
-        print 'WRDD calculation'
-        self.matrix = np.hstack([self.matrix, np.array([calculate_wrdd_in_one_sentence(self.app, self.dependency_core)]).T])
-
-    # D, не доделано
-    def word_wectors(self):
-        # WV
-        print 'Word vectors calculation'
-        self.matrixA = np.hstack([self.matrix, np.array(calculate_word_vectors(self.app))])
 
 #=============================================================================
 #                       3 task A realisation
@@ -251,10 +222,17 @@ def calculate_wbfl_in_one_sentence(references):
 #=============================================================================
 
 
-def build_path_from_root(elements, destination_index, path=[], current_ind = 0, previos_indexes = []):
+def build_path_from_root(elements, destination_index, path=None, current_ind = 0, previos_indexes = None):
     '''
         Get path from root to element
     '''
+
+    # Mutable defaults
+    if path is None:
+        path = []
+    if previos_indexes is None:
+        previos_indexes = []
+
     path.append(elements[current_ind][0])
     previos_indexes.append(current_ind)
     if (current_ind == destination_index):
@@ -274,9 +252,14 @@ def get_index_from_list(tokenized_text, ent,):
     return 0
 
 
+@log_time
 def calculate_dpr2c_in_one_sentence(references, dependency_core):
     print('DPR2C')
     for reference in references:
+        if reference.feature_type == Features.InOneSentence:
+            reference.path = 'NO'
+            continue
+
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
         index = get_index_from_list(tokenized_text, reference.refAobj)
@@ -285,12 +268,17 @@ def calculate_dpr2c_in_one_sentence(references, dependency_core):
             reference.path = 'None'
         else:
             reference.path = reduce(lambda x,y: x+'/'+y,path)
-    return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
+    return map(lambda reference: reference.path, references)
 
 
+@log_time
 def calculate_dpr2d_in_one_sentence(references, dependency_core):
     print('DPR2D')
     for reference in references:
+        if reference.feature_type == Features.InOneSentence:
+            reference.path = 'NO'
+            continue
+
         tokenized_text = dependency_core.word_tokenize(reference.text)
         tree = dependency_core.dependency_parse(reference.text)
         index = get_index_from_list(tokenized_text, reference.refBobj)
@@ -299,13 +287,13 @@ def calculate_dpr2d_in_one_sentence(references, dependency_core):
             reference.path = 'None'
         else:
             reference.path = reduce(lambda x,y: x+'/'+y,path)
-    return map(lambda reference: reference.path if reference.feature_type == Features.InOneSentence else 'NO',references)
+    return map(lambda reference: reference.path, references)
 
 
 #=============================================================================
 #                       3 task C realisation
 #=============================================================================
-
+@log_time
 def calculate_sdist_in_diff_sentence(references):
     #column of matrix with SDIST feature
     sdist_feature = []
@@ -331,7 +319,9 @@ def calculate_entity_freq_in_doc_in_diff_sentence(rels, left=True):
         counts[ent(rel).doc_id][ent(rel).value] += 1
     return map(lambda rel: counts[ent(rel).doc_id][ent(rel).value] if rel.feature_type == Features.InDifferentSentence else -1, rels)
 
+
 #for C4, C5
+@log_time
 def calculate_whether_type_of_entity_is_unique_in_doc(rels):
     # column of matrix with WOC feature
     woc_feature_left = []
@@ -381,9 +371,11 @@ def makeFeatureVec(tagged_words, model, num_features=VECTOR_SIZE):
     featureVec = np.divide(featureVec, nwords)
     return featureVec
 
+@log_time
 def crfq_left(rels):
     return calculate_entity_freq_in_doc_in_diff_sentence(rels, True)
 
 
+@log_time
 def crfq_right(rels):
     return calculate_entity_freq_in_doc_in_diff_sentence(rels, False)

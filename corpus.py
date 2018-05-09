@@ -89,11 +89,12 @@ class Corpus(DynamicFields):
         kf = KFold(n_splits=5)
         self.logger.info('CV start')
 
-        pipeline0 = PipeLine(self, False)
+        advanced_names = ('cpos', 'wvnull', 'wvfl', 'wbnull', 'wbfl', 'sdist', 'crfq', 'drfq', 'drp2c', 'drp2d', 'wco_wdo')
 
-        for fname, pipeline in pipeline0.generate_feature_variants(self):
+        for fname in advanced_names:
             logging.info('Testing {}'.format(fname))
-            cv_results = cross_validate(pipeline, self.relations, train_y, cv=kf,
+            pipeline = PipeLine(self, [fname])
+            cv_results = cross_validate(pipeline.pipeline, self.relations, train_y, cv=kf,
                                         scoring=scoring, verbose=2, return_train_score=True)
             print(cv_results)
 

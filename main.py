@@ -28,19 +28,20 @@ if __name__ == '__main__':
     corpus.first()
 
     #----------------------------------------------------------------------------
-    # logger.info("Second task started : Baseline model")
-    #
-    # corpus.second()
-    #
-    # #----------------------------------------------------------------------------
-    # logger.info("Third task started : Add extra features for data")
-    # #---------------------------A-------------------------------------------
-    # logger.info("Third task started : Extra features for relation in one sentence")
-    # corpus.third()
-    # #-----------------------------------------------------------------------
-    logger.info('Fourth task started')
-    corpus.fourth()
-    logger.info('Fourth task finished')
+    logger.info("Second task started : Baseline model")
+
+    corpus.second()
+
+    #----------------------------------------------------------------------------
+    logger.info("Third task started : Add extra features for data")
+    #---------------------------A-------------------------------------------
+    logger.info("Third task started : Extra features for relation in one sentence")
+    corpus.third()
 
     if args.model_out_path:
         corpus.pipeline.save(args.model_out_path)
+
+    #-----------------------------------------------------------------------
+    logger.info('Fourth task started')
+    corpus.fourth()
+    logger.info('Fourth task finished')
