@@ -5,6 +5,8 @@ import logging
 import os
 
 #logger
+from nltk import RegexpTokenizer
+
 logger = logging.getLogger('lib.py')
 
 #   Local path of project
@@ -84,6 +86,8 @@ def parse_args():
     '''
     RPARSER.add_argument('--train-size', help=u'Количество документов из src-train-texts',type=int,
                          default=999999999, required=False, nargs='?')
+    RPARSER.add_argument('--language', default='eng', help='Language of dataset', choices=('rus','eng'),required=True,
+                         nargs='?' )
     '''
         F2 and F3
     '''
@@ -127,3 +131,15 @@ def relations_in_sentence(documents, encoding):
         references_in_different_sentences += loc_out
 
     return references_in_one_sentence, references_in_different_sentences
+
+#TODO
+
+def preprocess(text,m):
+    lemmatized_text = m.lemmatize(text)
+    text = ''.join(lemmatized_text).lower()
+    text = text.lower()
+    tokenizer = RegexpTokenizer(r'\w+')
+    tokens = tokenizer.tokenize(text)
+    filtered_words = [w for w in tokens if not w in stopwords.words('russian')]
+    return filtered_words
+

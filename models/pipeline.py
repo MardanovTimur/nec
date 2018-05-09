@@ -1,11 +1,15 @@
 #coding=utf-8
+
+__author__ = 'Timur Mardanov'
+
+import codecs
 import os
+from gensim.models import KeyedVectors
+from pymystem3 import Mystem
 
 from joblib import Memory
 
 from library.decorators import log_time
-
-__author__ = 'Timur Mardanov'
 
 import pickle
 from collections import defaultdict
@@ -20,6 +24,7 @@ from sklearn.pipeline import FeatureUnion, Pipeline
 
 from library.lib import SENTENCE_DIVIDERS, PROJECT_PATH
 from models.relation import Features
+from library.lib import SENTENCE_DIVIDERS, preprocess
 from stanfordcorenlp import StanfordCoreNLP
 
 
@@ -208,9 +213,9 @@ pos_ids = defaultdict(lambda: len(pos_ids.items()))
 
 # CPOS (pos_tag of first entity)
 @log_time
-def calculate_cpos_in_one_sentence(rels):
+def calculate_cpos_in_one_sentence(rels, lang):
     tags = map(
-        lambda rel: pos_tag_cached(word_tokenize(rel.refAobj.value), tagset='universal')[0][1]
+        lambda rel: pos_tag_cached(word_tokenize(rel.refAobj.value), lang=lang, tagset='universal')[0][1]
         if rel.feature_type == Features.InOneSentence else 'NO',
         rels)
     return map(lambda tag: pos_ids[tag], tags)
@@ -218,16 +223,16 @@ def calculate_cpos_in_one_sentence(rels):
 
 # no verb between
 @log_time
-def calculate_wvnull_in_one_sentence(references):
+def calculate_wvnull_in_one_sentence(references, lang):
     return map(lambda reference: \
-                   verb_in_sentence(np.array(pos_tag_cached(reference.tokenized_text_between, tagset='universal'))) \
+                   verb_in_sentence(np.array(pos_tag_cached(reference.tokenized_text_between, lang=lang, tagset='universal'))) \
                        if reference.feature_type == Features.InOneSentence else -1, references)
 
 
 # only one verb
 @log_time
-def calculate_wvfl_in_one_sentence(references):
-    return map(lambda reference: verb_in_sentence(np.array(pos_tag_cached(reference.tokenized_text_between, tagset='universal')))\
+def calculate_wvfl_in_one_sentence(references, lang):
+    return map(lambda reference: verb_in_sentence(np.array(pos_tag_cached(reference.tokenized_text_between, lang=lang, tagset='universal')))\
                if reference.feature_type == Features.InOneSentence else -1,references)
 
 
@@ -353,24 +358,26 @@ def calculate_whether_type_of_entity_is_unique_in_doc(rels):
 #                       3 task D realisation
 #=============================================================================
 
-#не доделано
 def calculate_word_vectors(references):
-    model = None
+    fname = 'vec_models/ruwikiruscorpora-nobigrams_upos_skipgram_300_5_2018.vec'
+    model = KeyedVectors.load_word2vec_format(fname,binary=False)
     wc_feature = []
+    m = Mystem()
     for rel in references:
         words = rel.refAobj.value + " " + rel.refBobj.value
-        wc_feature.append(makeFeatureVec(words,model,VECTOR_SIZE))
+        words = preprocess(words,m)
+        tagged_words = pos_tag(tokens=words,tagset='universal',lang='rus')
+        wc_feature.append(makeFeatureVec(tagged_words,model,VECTOR_SIZE))
     return wc_feature
 
 
-def makeFeatureVec(words, model, num_features=VECTOR_SIZE):
+def makeFeatureVec(tagged_words, model, num_features=VECTOR_SIZE):
     featureVec = np.zeros((num_features,), dtype="float32")
     nwords = float(0)
-    index2word_set = set(model.wv.index2word)
-    for word in word_tokenize(words):
-        if word in index2word_set:
+    for word,pos in tagged_words:
+        if word+'_'+pos in model.vocab.keys():
             nwords = nwords + 1.
-            featureVec = np.add(featureVec, model.wv[word])
+            featureVec = np.add(featureVec, model[word+'_'+pos])
     featureVec = np.divide(featureVec, nwords)
     return featureVec
 
