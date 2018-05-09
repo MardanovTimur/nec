@@ -83,4 +83,4 @@ def parse_xml(file_path, encoding):
             }
             references_list.append(Relation(**kwargs_for_relation))
             XML_field.ref_id = []
-    return entities_list, references_list
+    return entities_list, references_list, text

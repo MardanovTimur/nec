@@ -122,9 +122,6 @@ def relations_in_sentence(documents, encoding):
     references_in_one_sentence, references_in_different_sentences = ([], [])
 
     for doc in documents:
-        if doc.text is None:
-            doc.text = io.open(doc.text_path, encoding='{}'.format(encoding)).read()
-
         loc_in, loc_out = count_rels(doc)
         references_in_one_sentence += loc_in
         references_in_different_sentences += loc_out

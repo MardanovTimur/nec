@@ -14,7 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model.logistic import LogisticRegression
 from sklearn.pipeline import FeatureUnion, Pipeline
 
-from library.lib import SENTENCE_DIVIDERS
+from library.lib import SENTENCE_DIVIDERS, PROJECT_PATH
 from models.relation import Features
 from stanfordcorenlp import StanfordCoreNLP
 
@@ -46,7 +46,7 @@ class CustomTfidfVectorizer(TfidfVectorizer):
 
 
 class ColumnTransformer(BaseEstimator):
-    def __init__(self, mapper, mapper_args=None):
+    def __init__(self, mapper, mapper_args=list()):
         self.mapper = mapper
         self.mapper_args = mapper_args
 
@@ -55,10 +55,7 @@ class ColumnTransformer(BaseEstimator):
 
     def transform(self, relations, y=None):
         res = self.mapper(relations, *self.mapper_args)
-        if type(res[0]) != 'list':
-            # If one column, wrap in array for np
-            res = [res]
-        return np.array(res).T
+        return np.array(res, ndmin=2).T
 
 
 class PipeLine(object):
@@ -69,25 +66,30 @@ class PipeLine(object):
         '''
             Init pipeline
         '''
-        self.pos_ids = defaultdict(lambda: len(self.pos_ids.items()))
-
         estimators = [
             ('left_vec', self.get_vectorizer(app, True)),
             ('right_vec', self.get_vectorizer(app, False)),
         ]
 
         if advanced_features:
+            self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(PROJECT_PATH, 'stanford_nlp')))
+
             estimators += [
+                # one sentence
                 ('cpos', ColumnTransformer(calculate_cpos_in_one_sentence)),
                 ('wvnull', ColumnTransformer(calculate_wvnull_in_one_sentence)),
                 ('wvfl', ColumnTransformer(calculate_wvfl_in_one_sentence)),
                 ('wbnull', ColumnTransformer(calculate_wbnull_in_one_sentence)),
                 ('wbfl', ColumnTransformer(calculate_wbfl_in_one_sentence)),
+
+                # different sentences
                 ('sdist', ColumnTransformer(calculate_sdist_in_diff_sentence)),
                 ('crfq', ColumnTransformer(crfq_left)),
                 ('drfq', ColumnTransformer(crfq_right)),
-                ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
-                ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
+                # ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
+                # ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
+
+                # C4, C5
                 ('wco_wdo', ColumnTransformer(calculate_whether_type_of_entity_is_unique_in_doc))
             ]
 
@@ -121,9 +123,6 @@ class PipeLine(object):
         '''
         self.pipeline.fit(relations, types)
 
-    def init_stanford_dependency_searching(self, ):
-        self.dependency_core = StanfordCoreNLP(os.path.abspath(os.path.join(self.app.BASE_PATH, 'stanford_nlp')))
-
     def test(self, test_relations):
         return self.pipeline.predict(test_relations)
 
@@ -148,14 +147,6 @@ class PipeLine(object):
         #WRDD
         print 'WRDD calculation'
         self.matrix = np.hstack([self.matrix, np.array([calculate_wrdd_in_one_sentence(self.app, self.dependency_core)]).T])
-
-    # C4 , C5
-    def whether_type_of_entity_is_unique_in_doc(self):
-        # WCO, WDO
-        print 'WCO, WDO calculation'
-        self.matrixA = np.hstack(
-            [self.matrix, np.array(calculate_whether_type_of_entity_is_unique_in_doc(self.app)).T])
-
 
     # D, не доделано
     def word_wectors(self):
@@ -186,6 +177,7 @@ pos_ids = defaultdict(lambda: len(pos_ids.items()))
 
 # CPOS (pos_tag of first entity)
 def calculate_cpos_in_one_sentence(rels):
+    print('CPOS')
     tags = map(
         lambda rel: pos_tag(word_tokenize(rel.refAobj.value), tagset='universal')[0][1]
         if rel.feature_type == Features.InOneSentence else 'NO',

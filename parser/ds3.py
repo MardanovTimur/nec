@@ -1,3 +1,4 @@
+import io
 import json
 from collections import defaultdict
 
@@ -7,7 +8,7 @@ from models.entity import Entity
 from models.relation import Relation
 
 
-def parse_dataset(basename, with_y=False):
+def parse_dataset(basename, encoding='utf-8', with_y=False):
     abstract_fields = ('id', 'title', 'text')
     entity_fields = ('doc_id', 'id', 'type', 'index_a', 'index_b', 'value')
     relation_fields = ('doc_id', 'type', 'TODO', '_', 'refA', 'refB')
@@ -17,8 +18,8 @@ def parse_dataset(basename, with_y=False):
         d.pop('_', None)  # remove ignored fields
         return d
 
-    abstracts_file = open(basename + '_abstracts.tsv', 'rb')
-    entities_file = open(basename + '_entities.tsv', 'rb')
+    abstracts_file = io.open(basename + '_abstracts.tsv', encoding=encoding)
+    entities_file = io.open(basename + '_entities.tsv', encoding=encoding)
 
     doc_entities = defaultdict(lambda: [])
     doc_relations = defaultdict(lambda: [])
@@ -57,5 +58,5 @@ def export_docs(docs, filename):
 
 
 if __name__ == '__main__':
-    dev_set = parse_dataset('./data/chemprot/chemprot_development', True)
+    dev_set = parse_dataset('./data/chemprot/chemprot_development', with_y=True)
     export_docs(dev_set, './target/docs.json')

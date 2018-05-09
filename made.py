@@ -12,11 +12,12 @@ class MadeCorpus(Corpus):
     def parse_objects(self, d_paths, a_paths):
         docs = []
         for path in a_paths:
-            e_list, r_list = parse_xml(path, self.text_encoding)
+            e_list, r_list, text = parse_xml(path, self.text_encoding)
             kwargs_for_doc = {
                 'entities': e_list,
                 'relations': r_list,
                 'annotation_path': path,
+                'text': text,
                 'text_path': path.replace('annotations', 'corpus').replace('.bioc.xml', ''),
             }
             doc = Document(**kwargs_for_doc)

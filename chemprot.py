@@ -12,6 +12,6 @@ class ChemprotCorpus(Corpus):
         docs = []
 
         for basename in basenames:
-            docs += list(parse_dataset(basename, True))
+            docs += list(parse_dataset(basename, encoding=self.text_encoding, with_y=True))
 
         return docs

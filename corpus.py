@@ -31,6 +31,7 @@ class Corpus(DynamicFields):
 
     def first(self, ):
         self.d_paths, self.a_paths = self.get_paths(self.train_path)
+        logging.info('Parsing objects...')
         self.docs = self.parse_objects(self.d_paths, self.a_paths)
         self.print_statistics()
 
