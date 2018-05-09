@@ -14,6 +14,8 @@ from library.lib import SENTENCE_DIVIDERS
 from models.reference import Features
 from stanfordcorenlp import StanfordCoreNLP
 
+VECTOR_SIZE = 300
+
 class PipeLine(object):
     leftVec = None
     rightVec = None
@@ -164,16 +166,21 @@ class PipeLine(object):
         # CRFQ, DRFQ
         print 'CRFQ, DRFQ calculation'
         self.matrixA = np.hstack(
-            [self.matrix, np.array([calculate_entity_freq_in_doc_in_diff_sentence(self.app)]).T])
+            [self.matrix, np.array(calculate_entity_freq_in_doc_in_diff_sentence(self.app)).T])
 
     # C4 , C5
     def whether_type_of_entity_is_unique_in_doc(self):
         # WCO, WDO
         print 'WCO, WDO calculation'
         self.matrixA = np.hstack(
-            [self.matrix, np.array([calculate_whether_type_of_entity_is_unique_in_doc(self.app)]).T])
+            [self.matrix, np.array(calculate_whether_type_of_entity_is_unique_in_doc(self.app)).T])
 
 
+    # D, не доделано
+    def word_wectors(self):
+        # WV
+        print 'Word vectors calculation'
+        self.matrixA = np.hstack([self.matrix, np.array(calculate_word_vectors(self.app))])
 
 
 
@@ -334,6 +341,34 @@ def whether_type_is_unique_in_doc(type, doc):
             if type_counts >= 2:
                 return 0
     return 1
+
+#=============================================================================
+#                       3 task D realisation
+#=============================================================================
+
+#не доделано
+def calculate_word_vectors(app):
+    model = None
+    wc_feature = []
+    references = app.all_references
+    for rel in references:
+        words = rel.refAobj.value + " " + rel.refBobj.value
+        wc_feature.append(makeFeatureVec(words,model,VECTOR_SIZE))
+    return wc_feature
+
+
+def makeFeatureVec(words, model, num_features=VECTOR_SIZE):
+    featureVec = np.zeros((num_features,), dtype="float32")
+    nwords = float(0)
+    index2word_set = set(model.wv.index2word)
+    for word in word_tokenize(words):
+        if word in index2word_set:
+            nwords = nwords + 1.
+            featureVec = np.add(featureVec, model.wv[word])
+    featureVec = np.divide(featureVec, nwords)
+    return featureVec
+
+
 
 # ------------------------------------------------------------------------
 #                      End
