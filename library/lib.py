@@ -93,8 +93,8 @@ def parse_args():
     '''
     PARSER.add_argument('--lm', type=str, dest='model_path', required=False,
                         help=u'путь к сериализованной языковой модели')
-    RPARSER.add_argument('--src-test-texts', type=str, help=u'путь к тестовой коллекции', required=REQUIRED)
-    RPARSER.add_argument('--src-texts', dest='test_path', type=str, help=u'путь к коллекции', required=REQUIRED)
+    RPARSER.add_argument('--src-test-texts', dest='test_path', type=str, help=u'путь к тестовой коллекции', required=REQUIRED)
+    RPARSER.add_argument('--src-texts', dest='src_path', type=str, help=u'путь к коллекции', required=REQUIRED)
     PARSER.add_argument('-o-texts', type=str, help=u'путь для сохранения языковой модели', required=False)
 
     args = PARSER.parse_args()

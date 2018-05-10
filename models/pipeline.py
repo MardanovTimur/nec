@@ -1,4 +1,7 @@
 #coding=utf-8
+import logging
+
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 __author__ = 'Timur Mardanov'
 
@@ -119,8 +122,8 @@ class PipeLine(object):
                 # C4, C5
                 ('wco_wdo', ColumnTransformer(calculate_whether_type_of_entity_is_unique_in_doc)),
             ] + ([
-                ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
-                ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
+                # ('drp2c', ColumnTransformer(calculate_dpr2c_in_one_sentence, [self.dependency_core])),
+                # ('drp2d', ColumnTransformer(calculate_dpr2d_in_one_sentence, [self.dependency_core])),
             ] if app.language != 'rus' else [
                 ('wordvec', ColumnTransformer(calculate_word_vectors)),
             ])
@@ -157,8 +160,11 @@ class PipeLine(object):
         '''
         self.pipeline.fit(relations, types)
 
-    def test(self, test_relations):
-        return self.pipeline.predict(test_relations)
+    def test(self, test_x, test_y):
+        pred_y = self.pipeline.predict(test_x)
+        logging.info('precision score: {}'.format(precision_score(test_y, pred_y)))
+        logging.info('   recall score: {}'.format(recall_score(test_y, pred_y)))
+        logging.info('       f1 score: {}'.format(f1_score(test_y, pred_y)))
 
 
 #=============================================================================
@@ -209,7 +215,6 @@ def calculate_wvfl_in_one_sentence(references, lang):
 
 @log_time
 def calculate_wbnull_in_one_sentence(references):
-    #INTBOOLLEN я вызываю тебя...........
     return map(lambda reference: int(bool(len(reference.text_between))) if reference.feature_type == Features.InOneSentence else -1,references)
 
 

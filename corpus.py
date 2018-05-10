@@ -25,6 +25,11 @@ class Corpus(DynamicFields):
     doc_pattern = None
     ann_pattern = None
 
+    test_path = None
+    _test_docs = None
+
+    model_path = None
+
     def __init__(self, *args, **kwargs):
         super(Corpus, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -50,6 +55,17 @@ class Corpus(DynamicFields):
     def parse_objects(self, d_paths, a_paths):
         raise NotImplementedError()
 
+    @property
+    def test_rels(self):
+        if not self.test_path:
+            return None
+        if self._test_docs:
+            return self._test_docs
+
+        d_paths, a_paths = self.get_paths(self.test_path)
+        test_docs = self.parse_objects(d_paths, a_paths)
+        return [rel for doc in test_docs for rel in doc.relations]
+
     def print_statistics(self):
         self.relations = [rel for doc in self.docs for rel in doc.relations]
 
@@ -71,22 +87,34 @@ class Corpus(DynamicFields):
         train_y = [rel.is_fictive for rel in self.relations]
 
         pipeline = PipeLine(self, False)
-        pipeline.fit(self.relations, train_y)
+
+        logging.info('Evaluating baseline model')
+
+        if self.test_rels:
+            self.fit(pipeline, self.relations, train_y)
+            pipeline.test(self.test_rels, [rel.is_fictive for rel in self.test_rels])
+        else:
+            self.cross_validate(pipeline, self.relations, train_y)
+
         return pipeline
 
     def third(self, ):
         train_y = [rel.is_fictive for rel in self.relations]
 
         pipeline = PipeLine(self, True)
-        pipeline.fit(self.relations, train_y)
+
+        if self.test_rels:
+            self.fit(pipeline, self.relations, train_y)
+            pipeline.test(self.test_rels, [rel.is_fictive for rel in self.test_rels])
+        else:
+            self.cross_validate(pipeline, self.relations, train_y)
+
         self.pipeline = pipeline
         return pipeline
 
     def fourth(self):
         train_y = [rel.is_fictive for rel in self.relations]
-        scoring = ['precision', 'recall', 'f1']
 
-        kf = KFold(n_splits=5)
         self.logger.info('CV start')
 
         advanced_names = ('cpos', 'wvnull', 'wvfl', 'wbnull', 'wbfl', 'sdist', 'crfq', 'drfq', 'drp2c', 'drp2d', 'wco_wdo')
@@ -94,19 +122,30 @@ class Corpus(DynamicFields):
         for fname in advanced_names:
             logging.info('Testing {}'.format(fname))
             pipeline = PipeLine(self, [fname])
-            cv_results = cross_validate(pipeline.pipeline, self.relations, train_y, cv=kf,
-                                        scoring=scoring, verbose=2, return_train_score=True)
-            print(cv_results)
-
-            print('Train results: ')
-            for metric in scoring:
-                res = cv_results['train_' + metric]
-                print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
-
-            print('Test results: ')
-            for metric in scoring:
-                res = cv_results['test_' + metric]
-                print('{}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
+            self.cross_validate(pipeline, self.relations, train_y)
 
         self.logger.info('CV end')
 
+    def fit(self, pipeline, X, y):
+        if self.model_path:
+            pipeline.load(self.model_path)
+        else:
+            pipeline.fit(X, y)
+
+    def cross_validate(self, pipeline, X, y, n_splits=5):
+        scoring = ['precision', 'recall', 'f1']
+
+        kf = KFold(n_splits=n_splits)
+
+        cv_results = cross_validate(pipeline.pipeline, X, y, cv=kf,
+                                    scoring=scoring, verbose=1, return_train_score=True)
+
+        print('Train results: ')
+        for metric in scoring:
+            res = cv_results['train_' + metric]
+            print('{:>10}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
+
+        print('Test results: ')
+        for metric in scoring:
+            res = cv_results['test_' + metric]
+            print('{:>10}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
