@@ -69,19 +69,19 @@ class Corpus(DynamicFields):
     def print_statistics(self):
         self.relations = [rel for doc in self.docs for rel in doc.relations]
 
-        print 'Count of documents: {}'.format(len(self.docs))
+        logging.info('Count of documents: {}'.format(len(self.docs)))
 
-        print 'Count of relations [ALL]: {}'.format(len(self.relations))
+        logging.info('Count of relations [ALL]: {}'.format(len(self.relations)))
 
         references_sentences = relations_in_sentence(self.docs, self.text_encoding)
-        print 'Count of relations [IN ONE SENTENCE]: {}\nCount of relations [IN DIFFERENT SENTENCES]: {}'. \
-            format(len(references_sentences[0]), len(references_sentences[1]))
+        logging.info('Count of relations [IN ONE SENTENCE]: {}\nCount of relations [IN DIFFERENT SENTENCES]: {}'. \
+            format(len(references_sentences[0]), len(references_sentences[1])))
         del references_sentences
 
         all_relations = [rel.refAobj.value for rel in self.relations] + [rel.refBobj.value for rel in self.relations]
 
-        print 'Count of entities in relations: {}'.format(len(all_relations))
-        print 'Count of UNIQUE entities in relations: {}'.format(len(set(all_relations)))
+        logging.info('Count of entities in relations: {}'.format(len(all_relations)))
+        logging.info('Count of UNIQUE entities in relations: {}'.format(len(set(all_relations))))
 
     def second(self):
         train_y = [rel.is_fictive for rel in self.relations]
@@ -148,12 +148,12 @@ class Corpus(DynamicFields):
         cv_results = cross_validate(pipeline.pipeline, X, y, cv=kf,
                                     scoring=scoring, verbose=1, return_train_score=True)
 
-        print('Train results: ')
+        logging.info('Train results: ')
         for metric in scoring:
             res = cv_results['train_' + metric]
-            print('{:>10}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
+            logging.info('{:>10}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
 
-        print('Test results: ')
+        logging.info('Test results: ')
         for metric in scoring:
             res = cv_results['test_' + metric]
-            print('{:>10}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))
+            logging.info('{:>10}: {}; mean: {}; stdev: {}'.format(metric, res, res.mean(), res.std()))

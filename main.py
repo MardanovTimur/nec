@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
     fh = logging.FileHandler('./app.log')
     fh.setFormatter(logging._defaultFormatter)
+    fh.setLevel('INFO')
     logger.addHandler(fh)
 
     args = parse_args()
