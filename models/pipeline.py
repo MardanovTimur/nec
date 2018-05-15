@@ -90,7 +90,7 @@ class PipeLine(object):
 
         if advanced_features:
             add = self.get_advanced_features(app)
-            if type(advanced_features) == list:
+            if hasattr(advanced_features, '__iter__'):
                 add = filter(lambda t: t[0] in advanced_features, add)
             estimators += add
 

@@ -117,11 +117,19 @@ class Corpus(DynamicFields):
 
         self.logger.info('CV start')
 
-        advanced_names = ('cpos', 'wvnull', 'wvfl', 'wbnull', 'wbfl', 'sdist', 'crfq', 'drfq', 'drp2c', 'drp2d', 'wco_wdo')
+        feature_packs = [
+            ('cpos', 'wvnull', 'wvfl', 'wbnull', 'wbfl'),
+            ('drp2c', 'drp2d'),
+            ('sdist', 'crfq', 'drfq', 'wco_wdo'),
+            ('wordvec', )
+        ]
 
-        for fname in advanced_names:
-            logging.info('Testing {}'.format(fname))
-            pipeline = PipeLine(self, [fname])
+        for i in range(1, len(feature_packs)):
+            feature_packs[i] += feature_packs[i-1]
+
+        for pack in feature_packs:
+            logging.info('Testing {}'.format(pack))
+            pipeline = PipeLine(self, [pack])
             self.cross_validate(pipeline, self.relations, train_y)
 
         self.logger.info('CV end')
