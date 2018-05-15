@@ -1,5 +1,6 @@
 from corpus import Corpus
 from parser.ds3 import parse_dataset
+import itertools
 
 
 class ChemprotCorpus(Corpus):
@@ -9,9 +10,8 @@ class ChemprotCorpus(Corpus):
     def parse_objects(self, d_paths, a_paths):
         basenames = [path.replace('_entities.tsv', '') for path in a_paths]
 
-        docs = []
+        docs = itertools.chain(*[
+            parse_dataset(basename, encoding=self.text_encoding, with_y=True) for basename in basenames
+        ])
 
-        for basename in basenames:
-            docs += list(parse_dataset(basename, encoding=self.text_encoding, with_y=True))
-
-        return docs
+        return list(itertools.islice(docs, self.train_size))
