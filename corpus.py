@@ -129,7 +129,7 @@ class Corpus(DynamicFields):
 
         for pack in feature_packs:
             logging.info('Testing {}'.format(pack))
-            pipeline = PipeLine(self, [pack])
+            pipeline = PipeLine(self, pack)
             self.cross_validate(pipeline, self.relations, train_y)
 
         self.logger.info('CV end')
