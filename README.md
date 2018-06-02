@@ -1,11 +1,8 @@
 # nec
-```Mardanov Timur; Shevyakov Ivan```
+```Mardanov Timur; Shevyakov Ivan; Krylov Anton```
 
-SUPER HOT PROJECT
+NLP project for extraction relations from parsed objects. (XML, BRAT, CHEMPROT)
 ======
-
-
-This is initial readme
 
 
 Insert dataset package in dir data in root of project. 
